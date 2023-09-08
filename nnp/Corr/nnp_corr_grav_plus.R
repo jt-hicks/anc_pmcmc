@@ -48,6 +48,10 @@ MZ_anc <- readRDS('nnp/data/MZ_ANC_mother_grouped_sitegrav_0822.rds')
 BF_cs <- readRDS('nnp/data/BF_CS_all_grouped_site_0822.rds')
 BF_anc <- readRDS('nnp/data/BF_ANC_mother_grouped_sitegrav.rds')
 
+BF_anc_sg <- readRDS('nnp/data/BF_ANC_mother_grouped_sitegrav_sg.rds')
+MZ_anc_sg <- readRDS('nnp/data/MZ_ANC_mother_grouped_sitegrav_0822_sg.rds')
+NG_anc_sg <- readRDS('nnp/data/NG_ANC_mother_grouped_sitegrav_sg.rds')
+
 NG_cs$country <- 'Nigeria'
 NG_anc$country <- 'Nigeria'
 MZ_cs$country <- 'Mozambique'
@@ -55,11 +59,16 @@ MZ_anc$country <- 'Mozambique'
 BF_cs$country <- 'Burkina Faso'
 BF_anc$country <- 'Burkina Faso'
 
+NG_anc_sg$country <- 'Nigeria'
+MZ_anc_sg$country <- 'Mozambique'
+BF_anc_sg$country <- 'Burkina Faso'
+
 all_cs <- rbind(NG_cs,MZ_cs,BF_cs)
 table(all_cs$month,all_cs$country)
 all_anc <- rbind(NG_anc,MZ_anc,BF_anc)
 table(all_anc$month,all_anc$country)
 all_cs$month_adj <- all_cs$month
+all_anc_sg <- rbind(NG_anc_sg,MZ_anc_sg,BF_anc_sg)
 ##Create an adjusted month variable so that the first month of CX data matches the first month of ANC data
 all_cs[all_cs$country=='Burkina Faso'&all_cs$month=='Jun 2020',]$month_adj <- as.yearmon('Sep 2020')
 all_cs[all_cs$country=='Mozambique'&(all_cs$month=='Oct 2020'),]$month_adj <- as.yearmon('Dec 2020')
@@ -76,6 +85,16 @@ all_both_total <- all_both %>%
   mutate(grav_cat = 'All pregnancies')
 all_both <- rbind(all_both,all_both_total)
 excel.link::xl.save.file(all_both,'nnp/data/nnp_prev4corr_main.xlsx')
+
+all_both_sg <- merge(all_cs,all_anc_sg, by = c('site','month','country'), suffixes = c('.cs','.anc'))
+all_both_total_sg <- all_both_sg %>%
+  group_by(country,site,month,.drop=FALSE)%>%
+  dplyr::summarise(positive.anc=sum(positive.anc),total.anc=sum(total.anc),positive.cs=mean(positive.cs),total.cs=mean(total.cs),
+                   mean.cs=mean(mean.cs),upper.cs=mean(upper.cs),lower.cs=mean(lower.cs),
+                   mean.anc=mean(mean.anc),upper.anc=mean(upper.anc),lower.anc=mean(lower.anc))%>%
+  mutate(grav_cat = 'All pregnancies')
+all_both_sg <- rbind(all_both_sg,all_both_total_sg)
+excel.link::xl.save.file(all_both_sg,'nnp/data/nnp_prev4corr_sg.xlsx')
 
 
 vaneijk <- read_excel('nnp/data/paper_data_strat_G.xlsx')
@@ -135,6 +154,11 @@ all_nnp_mg <- addCIs(all_nnp_mg,all_nnp_mg$positive.anc,all_nnp_mg$total.anc)%>%
                 upper.anc=upper,
                 lower.anc=lower)
 
+all_nnp_sg <- all_both_sg[all_both_sg$grav_cat=='Gravidities 2',]%>%
+  dplyr::mutate(country=dplyr::recode(country,`Nigeria`='NNP - Nigeria',
+                                      `Burkina Faso`='NNP - Burkina Faso',
+                                      `Mozambique`='NNP - Mozambique'))
+
 names(all_nnp)
 names(all_mipmon)
 mipmon <- readRDS('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/Mozambique/Analysis/mipmon/mipmon4corr.RDS')
@@ -146,17 +170,23 @@ all_mipmon_total <- mipmon[mipmon$grav=='All',]%>%
             total.anc=sum(total.anc))
 all_mipmon_pg <- mipmon[mipmon$grav=='primi',]
 all_mipmon_mg <- mipmon[mipmon$grav=='multi',]
+mipmon_sg <- readRDS('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/Mozambique/Analysis/mipmon/mipmon4corr_sg.RDS')
+all_mipmon_sg <- mipmon_sg[mipmon_sg$grav_sg=='secundi',]
+
 all_mipmon_total <- addCIs_anc(all_mipmon_total,all_mipmon_total$positive.cs,all_mipmon_total$total.cs,all_mipmon_total$positive.anc,all_mipmon_total$total.anc)%>%
   mutate(country='MiPMon')
 all_mipmon_pg <- addCIs_anc(all_mipmon_pg,all_mipmon_pg$positive.cs,all_mipmon_pg$total.cs,all_mipmon_pg$positive.anc,all_mipmon_pg$total.anc)%>%
   mutate(country='MiPMon')
 all_mipmon_mg <- addCIs_anc(all_mipmon_mg,all_mipmon_mg$positive.cs,all_mipmon_mg$total.cs,all_mipmon_mg$positive.anc,all_mipmon_mg$total.anc)%>%
   mutate(country='MiPMon')
+all_mipmon_sg <- addCIs_anc(all_mipmon_sg,all_mipmon_sg$positive.cs,all_mipmon_sg$total.cs,all_mipmon_sg$positive.anc,all_mipmon_sg$total.anc)%>%
+  mutate(country='MiPMon')
 excel.link::xl.save.file(all_mipmon_total,'nnp/data/mipmon_prev4corr_main.xlsx')
 
 all_data_total <- plyr::rbind.fill(all_nnp_total,all_ve,all_mipmon_total)
 all_data_pg <- plyr::rbind.fill(all_nnp_pg,primi_ve,all_mipmon_pg)
 all_data_mg <- plyr::rbind.fill(all_nnp_mg,multi_ve,all_mipmon_mg)
+all_data_sg <- plyr::rbind.fill(all_nnp_sg,all_mipmon_sg)
 
 all_data_total4model <- all_data_total %>%
   filter(country != 'NNP - Burkina Faso') %>%
@@ -168,6 +198,10 @@ all_data_mg4model <- all_data_mg %>%
   filter(country != 'NNP - Burkina Faso') %>%
   filter(!(country == 'NNP - Nigeria' & (site == 'Asa' | site == 'Moro') & month == as.yearmon('Nov 2021')))
 all_data_pgmg4model <- merge(all_data_pg4model,all_data_mg4model, by = c('site','month','country','positive.cs','total.cs','mean.cs','upper.cs','lower.cs'), suffixes = c('.pg','.mg'))
+
+all_data_sg4model <- all_data_sg %>%
+  filter(country != 'NNP - Burkina Faso') %>%
+  filter(!(country == 'NNP - Nigeria' & (site == 'Asa' | site == 'Moro') & month == as.yearmon('Nov 2021')))
 
 
 country_levels <- c("NNP - Mozambique","NNP - Nigeria","MiPMon","Van Eijk",'NNP - SMC implemented')
@@ -460,6 +494,7 @@ pred_pg <- data.frame(prev_child,prev_preg_lower,prev_preg_upper,prev_preg_media
 ##save a sample of 1000 simulations for use in pmcmc model fitting:
 pg_corr_sample <- sample_n(as.data.frame(run_model_pg$sims.matrix),1000)
 saveRDS(pg_corr_sample,'nnp/Corr/pg_corr_sample.RDS')
+pg_corr_sample <- readRDS('nnp/Corr/pg_corr_sample.RDS')
 ##Try to make similar graph in ggplot
 # grav_pg <- ggplot(all_data_pg4fig)+
 #   geom_point(aes(x=mean.cs*100,y=mean.anc*100,col=country),size=3)+
@@ -549,6 +584,56 @@ pred_mg <- data.frame(prev_child,prev_preg_lower,prev_preg_upper,prev_preg_media
 #   theme(legend.position = 'bottom')+
 #   labs(title='Multigravida',x='Cross-section Prevalence (<5 yo)',y='ANC Prevalence')
 # grav_mg
+
+###########  
+##Secundigrav
+###########
+##Model (preg_child_model) has been defined above
+## write to directory
+N_sites=nrow(all_data_sg4model)
+
+model.file <- file.path(tempdir(),"model.txt")
+write.model(preg_child_model, model.file)
+## put in bugs data format
+data_list_sg<-list(pos_child=all_data_sg4model$positive.cs,
+                   total_child=all_data_sg4model$total.cs,
+                   pos_preg=all_data_sg4model$positive.anc,
+                   total_preg=all_data_sg4model$total.anc,
+                   N=N_sites)
+
+## fn for random initial conditions
+inits<-function(){
+  list(av_lo_child=rnorm(1),intercept=rnorm(1),gradient=rnorm(1),sigma_c_inv=runif(1),sigma_int_inv=runif(1))
+}
+## params of interest
+params<-c("av_lo_child","intercept","gradient","sigma_child","sigma_intercept")
+
+## run the model
+run_model_sg <- bugs(data_list_sg, inits, params,
+                     model.file, n.iter=50000,n.burnin=10000)
+
+##attach the output
+attach.bugs(run_model_sg)
+### should recapture params - something slightly funny with gradient- need to check SD formats and priors
+quantile(gradient,c(0.025,0.5,0.975))
+quantile(intercept,c(0.025,0.5,0.975))
+quantile(av_lo_child,c(0.025,0.5,0.975))
+get_prev_from_log_odds(quantile(av_lo_child,c(0.025,0.5,0.975)))
+## lets plot the relationship (apols for horrible base R)
+prev_child=seq(0.01,0.99,by=0.01)
+logodds_child=log(get_odds_from_prev(prev_child))
+prev_preg_lower=array(dim=length(logodds_child))
+prev_preg_upper=array(dim=length(logodds_child))
+for(i in 1:length(logodds_child)){
+  prev_preg_lower[i]=get_prev_from_log_odds(quantile(logodds_child[i]+intercept+gradient*(logodds_child[i]-av_lo_child),0.025))
+  prev_preg_upper[i]=get_prev_from_log_odds(quantile(logodds_child[i]+intercept+gradient*(logodds_child[i]-av_lo_child),0.975))
+}
+prev_preg_median=get_prev_from_log_odds(logodds_child+median(gradient)*(logodds_child-median(av_lo_child))+median(intercept))
+pred_sg <- data.frame(prev_child,prev_preg_lower,prev_preg_upper,prev_preg_median)
+
+##save a sample of 1000 simulations for use in pmcmc model fitting:
+sg_corr_sample <- sample_n(as.data.frame(run_model_sg$sims.matrix),1000)
+saveRDS(sg_corr_sample,'nnp/Corr/sg_corr_sample.RDS')
 
 ##No smc
 grav_mg <- ggplot(all_data_mg4model)+
@@ -651,6 +736,23 @@ model_comp_mg <- ggplot(all_data_mg4model)+
   labs(title='Multigravida',x='Cross-section Prevalence (<5 yo)',y='ANC Prevalence')
 windows(7,7)
 model_comp_mg
+
+model_comp_sg <- ggplot(all_data_sg4model)+
+  geom_point(aes(x=mean.cs*100,y=mean.anc*100),col='grey',size=3)+
+  geom_errorbar(aes(x=mean.cs*100,ymin=lower.anc*100,ymax=upper.anc*100),col='grey',width=0)+
+  geom_errorbarh(aes(y=mean.anc*100,xmin=lower.cs*100,xmax=upper.cs*100),col='grey',height=0)+
+  scale_y_continuous(limits = c(0,100))+
+  scale_x_continuous(limits = c(0,100))+
+  geom_abline(size=0.8,linetype='dashed')+
+  geom_ribbon(data=pred_sg,aes(x=prev_child*100,ymin=prev_preg_lower*100,ymax=prev_preg_upper*100),alpha=0.2)+
+  geom_line(data=pred_sg,aes(x=prev_child*100,y=prev_preg_median*100),size=1)+
+  # scale_color_manual(name="Model",values=colors_model)+
+  # scale_fill_manual(name="Model",values=colors_model)+
+  theme_bw()+
+  theme(legend.position = 'bottom')+
+  labs(title='Secundigravida',x='Cross-section Prevalence (<5 yo)',y='ANC Prevalence')
+windows(7,7)
+model_comp_sg
 
 windows(height=5.5,width=13)
 grav_all_4comp + model_comp_pg + model_comp_mg + 

@@ -1,8 +1,7 @@
-library (bayesplot)
+library(bayesplot)
+library(tidyverse)
 library(excel.link)
 library(zoo)
-library(plyr)
-library(dplyr)
 library(ggpubr)
 library(binom)
 library(gridExtra)
@@ -93,20 +92,22 @@ NG_ANC_mother_grouped_sitegrav <- addCIs(NG_ANC_mother_grouped_sitegrav,NG_ANC_m
 saveRDS(NG_ANC_mother_grouped_sitegrav,'nnp/data/NG_ANC_mother_grouped_sitegrav.rds')
 NG_ANC_mother_grouped_sitegrav<-readRDS('nnp/data/NG_ANC_mother_grouped_sitegrav.rds')
 
+##secundigrav
+NG_ANC_mother_grouped_sitegrav_sg <- NG_ANC_mother %>%
+  dplyr::rename(site = lga) %>%
+  dplyr::mutate(grav_cat=cut(grav,breaks=c(0,1,2,Inf),labels=c("Gravidities 1","Gravidities 2","Gravidities 3+")))%>%
+  filter(!is.na(site))%>%
+  group_by(site,month,grav_cat,.drop=FALSE)%>%
+  dplyr::summarise(positive=sum(rdt),total=n())
+NG_ANC_mother_grouped_sitegrav_sg <- addCIs(NG_ANC_mother_grouped_sitegrav_sg,NG_ANC_mother_grouped_sitegrav_sg$positive,NG_ANC_mother_grouped_sitegrav_sg$total)
+saveRDS(NG_ANC_mother_grouped_sitegrav_sg,'nnp/data/NG_ANC_mother_grouped_sitegrav_sg.rds')
+
+
 #######################
 ######MOZAMBIQUE#######
 #######################
 #Read in Mozambique data and rename most used variables
-MZ_ANC_mother_2021 <- xl.read.file('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/PATH/Imperial College (ANC)_data_dl180123/Mozambique/ANC-based surveillance/ANC_Mozambique_2021.11.xlsx',
-                              xl.sheet = 'ANC')%>%
-  dplyr::rename(primigrav = q4_primagravidae,
-                prev_pregs = q5_num_pregnancy,
-                mal_symp = q6_mal_symptoms,
-                rdt = q7_rdt_result,
-                age = q2_age_n) %>%
-  dplyr::mutate(month = as.yearmon(as.Date(date_interview_n)),
-                grav = ifelse(primigrav=='Yes',1,ifelse(prev_pregs==0,NA,prev_pregs+1)))
-MZ_ANC_mother_2022 <- xl.read.file('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/PATH/Imperial College (ANC)_data_dl180123/Mozambique/ANC-based surveillance/ANC_Mozambique_2022.09_FINAL.xlsx',
+MZ_ANC_mother <- xl.read.file('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/PATH/Imperial College (ANC)_data_dl020323/Mozambique/ANC-based surveillance/ANC_Mozambique_2022.09_FINAL.xlsx',
                                    xl.sheet = 'ANC')%>%
   dplyr::rename(primigrav = q4_primagravidae,
                 prev_pregs = q5_num_pregnancy,
@@ -115,8 +116,6 @@ MZ_ANC_mother_2022 <- xl.read.file('C:/Users/jthicks/OneDrive - Imperial College
                 age = q2_age_n) %>%
   dplyr::mutate(month = as.yearmon(as.Date(date_interview_n)),
                 grav = ifelse(primigrav=='Yes',1,ifelse(prev_pregs==0,NA,prev_pregs+1)))
-#Combine 2 years of data
-MZ_ANC_mother <- plyr::rbind.fill(MZ_ANC_mother_2021,MZ_ANC_mother_2022)
 
 #Read in Mozambique data and rename most used variables
 MZ_CS_rdt_base <- xl.read.file('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/PATH/Imperial College (ANC)_data_dl180123/Mozambique/Cross-sectional survey/Moz Baseline CSS Datasets 2020.xlsx',
@@ -161,11 +160,25 @@ MZ_ANC_mother_grouped_sitegrav <- addCIs(MZ_ANC_mother_grouped_sitegrav,MZ_ANC_m
 saveRDS(MZ_ANC_mother_grouped_sitegrav,'nnp/data/MZ_ANC_mother_grouped_sitegrav_0822.rds')
 MZ_ANC_mother_grouped_sitegrav <- readRDS('nnp/data/MZ_ANC_mother_grouped_sitegrav_0822.rds')
 
+### secundigrav
+MZ_ANC_mother_grouped_sitegrav_sg <- MZ_ANC_mother %>%
+  dplyr::rename(site = district_n) %>%
+  mutate(grav_cat=cut(grav,breaks=c(0,1,2,Inf),labels=c("Gravidities 1","Gravidities 2","Gravidities 3+")),
+         rdt=as.numeric(ifelse(rdt=='Positive',1,ifelse(rdt=='Negative',0,NA))))%>%
+  filter(!is.na(rdt)) %>%
+  filter(!is.na(age)) %>%
+  filter(age>=12&age<50) %>%
+  filter(!is.na(grav))%>%
+  group_by(site,month,grav_cat,.drop=FALSE)%>%
+  dplyr::summarise(positive=sum(rdt),total=n())
+MZ_ANC_mother_grouped_sitegrav_sg <- addCIs(MZ_ANC_mother_grouped_sitegrav_sg,MZ_ANC_mother_grouped_sitegrav_sg$positive,MZ_ANC_mother_grouped_sitegrav_sg$total)
+saveRDS(MZ_ANC_mother_grouped_sitegrav_sg,'nnp/data/MZ_ANC_mother_grouped_sitegrav_0822_sg.rds')
+
 #########################
 ######Burkina Faso#######
 #########################
 #Read in Burkina Faso data and rename most used variables
-BF_ANC_mother <- xl.read.file('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/PATH/Imperial College (ANC)_data_dl180123/Burkina Faso/ANC-based surveillance/ANC_BF_2022.12.28_FINAL.xlsx',
+BF_ANC_mother <- xl.read.file('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/PATH/Imperial College (ANC)_data_dl020323/Burkina Faso/ANC-based surveillance/ANC_BF_2022.12.28_FINAL.xlsx',
                               xl.sheet = 'ANC_woman')%>%
   dplyr::rename(primigrav = Q04_first_preg,
                 prev_pregs = Q05_nbr_prior_preg,
@@ -226,6 +239,112 @@ BF_ANC_mother_grouped_sitegrav <- BF_ANC_mother %>%
 BF_ANC_mother_grouped_sitegrav <- addCIs(BF_ANC_mother_grouped_sitegrav,BF_ANC_mother_grouped_sitegrav$positive,BF_ANC_mother_grouped_sitegrav$total)
 saveRDS(BF_ANC_mother_grouped_sitegrav,'nnp/data/BF_ANC_mother_grouped_sitegrav.rds')
 BF_ANC_mother_grouped_sitegrav <- readRDS('nnp/data/BF_ANC_mother_grouped_sitegrav.rds')
+
+##secundigrav
+BF_ANC_mother_grouped_sitegrav_sg <- BF_ANC_mother %>%
+  dplyr::rename(site = District) %>%
+  mutate(grav_cat=cut(grav,breaks=c(0,1,2,Inf),labels=c("Gravidities 1","Gravidities 2","Gravidities 3+")),
+         rdt=as.numeric(ifelse(rdt=='Positif',1,0)))%>%
+  filter(!is.na(rdt)) %>%
+  filter(!is.na(age)) %>%
+  filter(age!=88) %>%
+  filter(!is.na(grav))%>%
+  group_by(site,month,grav_cat,.drop=FALSE)%>%
+  dplyr::summarise(positive=sum(rdt),total=n())
+BF_ANC_mother_grouped_sitegrav_sg <- addCIs(BF_ANC_mother_grouped_sitegrav_sg,BF_ANC_mother_grouped_sitegrav_sg$positive,BF_ANC_mother_grouped_sitegrav_sg$total)
+saveRDS(BF_ANC_mother_grouped_sitegrav_sg,'nnp/data/BF_ANC_mother_grouped_sitegrav_sg.rds')
+
+#########################
+#########Zambia##########
+#########################
+#Read in Zambia data and rename most used variables
+ZM_ANC_mother <- read.csv('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/PATH/NNP_zambia_dl210823/ANC Surveillance/ANC Surveillance_clean_attendees.csv') %>%
+  # exclude those refusing malaria portion
+  filter(consent_granted %in% c("Malaria portion only", "Full study")) %>%
+  # merge aggregate treatment seeking data per mother
+  mutate(
+    month = as.yearmon(as.Date(survey_date)),
+    
+    # RDT testing and result among women of reproductive age (same as rdt for ANC attendees); 
+    # added for dataset consistency 
+    rdt = as.numeric(na_if(standard_rdt_result, "Not Valid")=="Pf Positive"),
+    primigrav = first_pregnancy,
+    prev_pregs = num_of_prior_pregnancies,
+    rdt = RDT,
+    age = age_in_years,
+    grav = ifelse(primigrav=='Yes',1,prev_pregs+1),
+    # categorize attendee residency
+    # within Zambia
+    res_zam = as.numeric(live_in_this_hf_catchment=="Yes" | 
+                           residence %in% c("Another Part Of Chadiza District",
+                                            "In Another District In Eastern Province",
+                                            "In Zambia, But Outside Of Eastern Province")),
+    res_zam = replace(res_zam, live_in_this_hf_catchment=="Refused", NA),
+    # whether near border (in Chadiza)
+    res_zam_border = as.numeric(live_in_this_hf_catchment=="Yes" & 
+                                  health_facility %in% c("Chanida Health Post", "Kapirimpika Health Post",
+                                                         "Mkumbuzi Rural Health Centre", "Mtaya Health Post",
+                                                         "Miti Rural Health Centre")),
+    res_zam_border = replace(res_zam_border, res_zam=="No" | is.na(res_zam), NA),
+    # together in one variable
+    res_cat = case_when(res_zam==T & res_zam_border==F            ~ "Zambia, non-border",
+                        res_zam==T & res_zam_border==T            ~ "Zambia, border",
+                        residence=="Mozambique"                   ~ "Mozambique",
+                        residence %in% c("Malawi", "Other Area")  ~ "Other",
+                        TRUE                                      ~ NA_character_),
+    
+  ) %>%
+  # drop attendees with uncategorizable residence
+  filter(!is.na(res_cat)) %>%
+  # drop obs before 2020-01-01; error dates before start of data collection
+  filter(month >= "2020-01-01")
+
+#Read in Zambia data and rename most used variables
+
+#Group CS data and calculate prevalence and CI by month
+# BF_CS_all_grouped_site <- BF_CS_child_all %>%
+#   rename(site = District) %>%
+#   mutate(
+#     rdt=as.numeric(ifelse(rdt=='Négatif',0,1))
+#   )%>%
+#   filter(!is.na(rdt)) %>%
+#   group_by(site,month,.drop=FALSE)%>%
+#   dplyr::summarise(positive=sum(rdt),total=n())
+# BF_CS_all_grouped_site <- addCIs(BF_CS_all_grouped_site,BF_CS_all_grouped_site$positive,BF_CS_all_grouped_site$total)
+# saveRDS(BF_CS_all_grouped_site,'nnp/data/BF_CS_all_grouped_site_0822.rds')
+# BF_CS_all_grouped_site <-readRDS('nnp/data/BF_CS_all_grouped_site_0822.rds')
+
+#Group ANC data by site
+#Group by grav
+table(ZM_ANC_mother$outreach_zone)
+table(ZM_ANC_mother$age)
+table(ZM_ANC_mother$age_in_years)
+table(ZM_ANC_mother$age_in_months)
+
+ZM_ANC_mother_grouped_sitegrav <- ZM_ANC_mother %>%
+  mutate(grav_cat=cut(grav,breaks=c(0,1,3,Inf),labels=c("Gravidities 1","Gravidities 2-3","Gravidities 4+")),
+         month = ifelse(month==as.yearmon('Feb 2020'),as.yearmon('Mar 2020'),month))%>%
+  filter(!is.na(rdt)) %>%
+  filter(!is.na(grav))%>%
+  group_by(month,grav_cat,.drop=FALSE)%>%
+  dplyr::summarise(positive=sum(rdt),total=n())
+ZM_ANC_mother_grouped_sitegrav <- addCIs(ZM_ANC_mother_grouped_sitegrav,ZM_ANC_mother_grouped_sitegrav$positive,ZM_ANC_mother_grouped_sitegrav$total)
+saveRDS(ZM_ANC_mother_grouped_sitegrav,'nnp/data/ZM_ANC_mother_grouped_sitegrav.rds')
+ZM_ANC_mother_grouped_sitegrav <- readRDS('nnp/data/ZM_ANC_mother_grouped_sitegrav.rds')
+
+##secundigrav
+BF_ANC_mother_grouped_sitegrav_sg <- BF_ANC_mother %>%
+  dplyr::rename(site = District) %>%
+  mutate(grav_cat=cut(grav,breaks=c(0,1,2,Inf),labels=c("Gravidities 1","Gravidities 2","Gravidities 3+")),
+         rdt=as.numeric(ifelse(rdt=='Positif',1,0)))%>%
+  filter(!is.na(rdt)) %>%
+  filter(!is.na(age)) %>%
+  filter(age!=88) %>%
+  filter(!is.na(grav))%>%
+  group_by(site,month,grav_cat,.drop=FALSE)%>%
+  dplyr::summarise(positive=sum(rdt),total=n())
+BF_ANC_mother_grouped_sitegrav_sg <- addCIs(BF_ANC_mother_grouped_sitegrav_sg,BF_ANC_mother_grouped_sitegrav_sg$positive,BF_ANC_mother_grouped_sitegrav_sg$total)
+saveRDS(BF_ANC_mother_grouped_sitegrav_sg,'nnp/data/BF_ANC_mother_grouped_sitegrav_sg.rds')
 
 ########################################
 ####Create Plots for Each Country#######
@@ -307,6 +426,20 @@ ggplot(data=BF_ANC_mother_grouped_sitegrav,aes(x=month,y=mean,col=as.factor(grav
   geom_errorbar(data=BF_CS_all_grouped_site,aes(x=month,y=mean,ymax=upper,ymin=lower,width=0),color="#D55E00")+
   facet_wrap(vars(site),nrow=2,ncol=2,labeller = labeller(site = BF_labs))+
   geom_vline(data=BF_iv,aes(xintercept=month),color='darkgrey',size=2,alpha = 0.5)+
+  theme(legend.position="bottom",
+        axis.text.x = element_text(size = 10, angle = 45, vjust = 1.2, hjust = 1),
+        axis.text.y = element_text(size = 10),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        strip.text.x = element_text(size = 12, face = "bold"))
+
+ggplot(data=ZM_ANC_mother_grouped_sitegrav,aes(x=month,y=mean,col=as.factor(grav_cat)))+
+  geom_line()+
+  geom_point(size=3)+
+  theme_minimal()+
+  geom_errorbar(aes(x=month,y=mean,ymax=upper,ymin=lower,width=0,col=as.factor(grav_cat)))+
+  ylab("Prevalence")+xlab("Month")+
+  scale_color_viridis(name="Data source",option = "D",discrete=T,begin=0.2,end=0.9)+
   theme(legend.position="bottom",
         axis.text.x = element_text(size = 10, angle = 45, vjust = 1.2, hjust = 1),
         axis.text.y = element_text(size = 10),
@@ -724,6 +857,14 @@ prop.table(table(BF_ANC_mother$mal_symp))
 
 ##Summary table
 all_ANC_mother_grouped_sitegrav <- bind_rows(BF_ANC_mother_grouped_sitegrav,MZ_ANC_mother_grouped_sitegrav,NG_ANC_mother_grouped_sitegrav)
+all_ANC_mother_grouped_sitegrav%>%
+  group_by(site)%>%
+  summarise(start=min(month),
+            end=max(month),
+            total=sum(total),
+            tot.pos = sum(positive),
+            prev = round(sum(positive)/sum(total) * 100,1))
+
 total_prev <- all_ANC_mother_grouped_sitegrav%>%
   group_by()%>%
   dplyr::summarise(positive = sum(positive),

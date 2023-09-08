@@ -9,6 +9,7 @@ library(RColorBrewer)
 library(bayesplot)
 library(binom)
 source('shared/addCIs.R')
+source('shared/addCIs_inc.R')
 library(lubridate)
 library(matrixStats)
 library(epitools)
@@ -20,20 +21,36 @@ theme_set(theme_minimal()+
                   strip.background = element_blank(),
                   panel.border = element_rect(colour = "black",fill=NA),
                   legend.position = 'bottom'))
-
+result <- nnp_pgmg_bulk_sifter_betaa_max125_results[[1]]
+country <- 'Burkina Faso'
+district <- 'Banfora'
 create_diag_figs <- function(result,country,district){
   print('acceptance rate')
-  print(1 - coda::rejectionRate(as.mcmc(result$mcmc)))
+  ar <- 1 - coda::rejectionRate(as.mcmc(result$mcmc))
+  print(ar)
   print('effective size')
-  print(coda::effectiveSize(as.mcmc(result$mcmc)))
+  ess <- coda::effectiveSize(as.mcmc(result$mcmc))
+  print(ess)
   
   title <- paste0('Diagnostic plots for seasonal model - ',district,', ',country)
-
-  diag <- ((bayesplot::mcmc_trace(result$mcmc[51:1000,],pars = 'log_prior')+mcmc_dens(result$mcmc[51:1000,],pars = 'log_prior'))/
-      (bayesplot::mcmc_trace(result$mcmc[51:1000,],pars = 'log_likelihood')+mcmc_dens(result$mcmc[51:1000,],pars = 'log_likelihood'))/
-      (bayesplot::mcmc_trace(result$mcmc[51:1000,],pars = 'log_posterior')+mcmc_dens(result$mcmc[51:1000,],pars = 'log_posterior'))/
-      (bayesplot::mcmc_trace(result$mcmc[51:1000,],pars = 'EIR_SD')+mcmc_dens(result$mcmc[51:1000,],pars = 'EIR_SD'))/
-      (bayesplot::mcmc_trace(result$mcmc[51:1000,],pars = 'log_init_EIR')+mcmc_dens(result$mcmc[51:1000,],pars = 'log_init_EIR'))) + 
+  pars_list <- c('log_prior','log_likelihood','log_posterior','volatility','log_init_EIR')
+  trace_plots <- lapply(pars_list, function(x){
+    bayesplot::mcmc_trace(result$mcmc[51:1000,],pars = x) + 
+      ggtitle(paste0(x,' / AR: ',round(ar[x],3),' / ESS: ',round(ess[x],1)))+
+      theme(title = element_text(size=6),
+            axis.title.y = element_blank())
+  })
+  dense_plots <- lapply(pars_list, function(x){
+    bayesplot::mcmc_dens(result$mcmc[51:1000,],pars = x) + 
+      ggtitle(paste0(x,' / AR: ',round(ar[x],2),' / ESS: ',round(ess[x],1)))+
+      theme(title = element_text(size=6),
+            axis.title.x = element_blank())
+  })
+  diag <- (trace_plots[[1]]+dense_plots[[1]])/
+    (trace_plots[[2]]+dense_plots[[2]])/
+    (trace_plots[[3]]+dense_plots[[3]])/
+    (trace_plots[[4]]+dense_plots[[4]])/
+    (trace_plots[[5]]+dense_plots[[5]]) +
     plot_layout(guides = "collect") + plot_annotation(title = title)
     
   
@@ -46,6 +63,19 @@ diag_std_pgmg_plots <- lapply(1:10,function(i) create_diag_figs(nnp_mgcorr_bulk_
 diag_seas_pg_plots <- lapply(1:10,function(i) create_diag_figs(nnp_pgcorr_bulk_seas_results[[i]],country = country[i],district = district_list[i]))
 diag_std_pg_plots <- lapply(1:10,function(i) create_diag_figs(nnp_pgcorr_bulk_std_results[[i]],country = country[i],district = district_list[i]))
 diag_seas_pgmg_plots <- lapply(1:10,function(i) create_diag_figs(nnp_mgcorr_bulk_seas_results_update[[i]],country = country[i],district = district_list[i]))
+
+diag_pgmg_sifter_eir_plots <- lapply(1:10,function(i) create_diag_figs(nnp_pgmg_bulk_sifter_eir_results[[i]],country = country[i],district = district_list[i]))
+
+diag_pgmg_sifter_betaa_plots<- lapply(1:10,function(i) create_diag_figs(nnp_pgmg_bulk_sifter_betaa_results[[i]],country = country[i],district = district_list[i]))
+
+diag_pgmg_sifter_betaa_max125_plots<- lapply(1:10,function(i) create_diag_figs(nnp_pgmg_bulk_sifter_betaa_max125_results[[i]],country = country[i],district = district_list[i]))
+
+diag_pgmg_sifter_betaa_2407_plots<- lapply(1:10,function(i) create_diag_figs(nnp_pgmg_bulk_sifter_betaa_2407_results[[i]],country = country[i],district = district_list[i]))
+
+diag_pgmg_sifter_betaa_plots[1]
+diag_pgmg_sifter_betaa_plots[2]
+
+create_diag_figs(nnp_pgmg_bulk_sifter_betaa_2407.2$tasks[[1]]$result(),country=country[2],district=district_list[2])
 
 country <- c('Burkina Faso','Burkina Faso','Burkina Faso',
              'Mozambique','Mozambique','Mozambique',
@@ -88,10 +118,29 @@ for(i in c(1:10)){
   print(diag_seas_pgmg_plots[i])
   ggsave(paste0('Q:/anc_pmcmc/nnp/figures/diag/',district_list[i],'_pgmg_seas_020323.pdf'), width = 10, height = 7)
 }
+for(i in c(1:10)){
+  ggsave(paste0('Q:/anc_pmcmc/nnp/figures/diag/',district_list[i],'_pgmg_sifter_eir.pdf'),plot=diag_pgmg_sifter_eir_plots[[i]], width = 10, height = 7)
+}
+for(i in c(1:10)){
+  ggsave(paste0('Q:/anc_pmcmc/nnp/figures/diag/',district_list[i],'_pgmg_sifter_betaa.pdf'),plot=diag_pgmg_sifter_betaa_plots[[i]], width = 10, height = 7)
+}
+for(i in c(1:10)){
+  ggsave(paste0('Q:/anc_pmcmc/nnp/figures/diag/',district_list[i],'_pgmg_sifter_betaa.pdf'),plot=diag_pgmg_sifter_betaa_plots[[i]], width = 10, height = 7)
+}
+for(i in c(1:10)){
+  ggsave(paste0('Q:/anc_pmcmc/nnp/figures/diag/',district_list[i],'_pgmg_max125_betaa.pdf'),plot=diag_pgmg_sifter_betaa_max125_plots[[i]], width = 7, height = 7)
+}
+for(i in c(1:10)){
+  ggsave(paste0('Q:/anc_pmcmc/nnp/figures/diag/',district_list[i],'_pgmg_2407_betaa.pdf'),plot=diag_pgmg_sifter_betaa_2407_plots[[i]], width = 7, height = 7)
+}
+diag_pgmg_sifter_betaa_max125_plots[[1]] + diag_pgmg_sifter_betaa_2407_plots[[1]] + plot_layout(ncol=2)
 nnp_mgcorr_bulk_seas_results_update
 summary_init_EIR <- bind_rows(lapply(1:10,function(x,result){
   exp(quantile(result[[x]]$mcmc[501:1000,'log_init_EIR'], probs = c(0.025,0.5,0.975)))
 },result=nnp_mgcorr_bulk_seas_results_update))
+names(nnp_pg_list) <- district_list
+names(nnp_mg_list) <- district_list
+
 nnp_pg_list <- list(Banfora = data_raw_bf_pg_banfora,Gaoua = data_raw_bf_pg_gaoua,Orodara = data_raw_bf_pg_orodara,
                  Changara = data_raw_mz_pg_changara, Chemba = data_raw_mz_pg_chemba,Guro = data_raw_mz_pg_guro,
                  Asa = data_raw_ng_pg_asa,Ejigbo = data_raw_ng_pg_ejigbo,`Ife North` = data_raw_ng_pg_ifenorth, Moro = data_raw_ng_pg_moro)
@@ -820,6 +869,7 @@ MZ_estprev_pg/MZ_inc_pg
 NG_estprev_pg/NG_inc_pg
 
 ##Create plots for BF and NG HMIS data
+
 bf_hmis <- readxl::read_excel('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/PATH/Imperial College (ANC)_data_dl020323/Burkina Faso/Routine HMIS/Routine Data All Ages.xlsx')
 bf_hmis <- bf_hmis %>%
   rename(district = 'Distrist')%>%
@@ -838,20 +888,61 @@ bf_hmis_u5 <- bf_hmis_u5 %>%
     district=='Tougan' ~ 11720+42273,
     district=='Banfora' ~ 14131+50817,
     district=='Orodara' ~ 8262+31725,
-    district=='Gaoua' ~ 9927+35702
-  ))
+    district=='Gaoua' ~ 9927+35702),
+    date = as.yearmon(date)
+  )
 
+bf_hmis <- readxl::read_excel('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/PATH/Imperial College (ANC)_data_dl020323/Burkina Faso/Routine HMIS/Routine Data All Ages.xlsx')
+bf_hmis <- bf_hmis %>%
+  rename(district = 'Distrist')%>%
+  mutate(population_2017 = case_when(
+    district=='Nouna' ~ 368395-(15001+54109),
+    district=='Tougan' ~ 287801-(11720+42273),
+    district=='Banfora' ~ 392498-(14131+50817),
+    district=='Orodara' ~ 257258-(8262+31725),
+    district=='Gaoua' ~ 252385-(9927+35702)
+  ))
 mz_hmis <- readxl::read_excel('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/PATH/Imperial College (ANC)_data_dl020323/Mozambique/Routine HMIS/Mozambique_Routine_Sept2022.xlsx')
 ng_hmis <- readxl::read_excel('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/PATH/Imperial College (ANC)_data_dl020323/Nigeria/Routine data/NNP Nigeria HMIS Data 2019-2022 - LGA rev 2023.03.02.xlsx')
 
 bf_hmis_sum <- bf_hmis %>%
-  group_by(Month,Year,`Net type`,Distrist)%>%
+  group_by(Month,Year,`Net type`,district)%>%
   dplyr::summarise(confirmed = sum(Confirmed),
             population = sum(Population))%>%
-  mutate(inc = confirmed*10000/population)%>%
-  dplyr::rename(district = Distrist)
+  mutate(inc = confirmed*10000/population)
 
 bf_hmis_sum$date = as.yearmon(paste(bf_hmis_sum$Year, bf_hmis_sum$Month), "%Y %b")
+bf_hmis$date = as.yearmon(paste(bf_hmis$Year, bf_hmis$Month), "%Y %b")
+bf_hmis_all <- left_join(bf_hmis,bf_hmis_u5,by=c('date','district'),suffix=c('.allpop','.u5'))
+bf_hmis_all$positive_o5 <- bf_hmis_all$`RDT +`-bf_hmis_all$positive
+bf_hmis_forplot <- bf_hmis_all[bf_hmis_all$district %in% c('Banfora','Gaoua','Orodara')&bf_hmis_all$date>=as.yearmon('Sep 2020')&
+                                 bf_hmis_all$date<=as.yearmon('Jun 2022')&!is.na(bf_hmis_all$Confirmed),]
+bf_hmis_forplot <- addCIs_inc(bf_hmis_forplot,bf_hmis_forplot$positive_o5,bf_hmis_forplot$population_2017)
+bf_hmis_forplot <- bf_hmis_forplot %>%
+  mutate(date_ex = as.Date(date, frac = 0),
+         prop_pos = positive_o5/(Tested-tested))%>%
+  dplyr::rename(inc = mean)
+
+mz_hmis_filtered <- mz_hmis[mz_hmis$District %in% c('Changara','Chemba','Guro')&!is.na(mz_hmis$Positive),]%>%
+  group_by(District, Month, Year, `Net type`)%>%
+  dplyr::summarise(Tested=sum(Tested),
+                   Positive=sum(Positive),
+                   Population=sum(u5.Population))
+mz_hmis_forplot <- addCIs_inc(mz_hmis_filtered,mz_hmis_filtered$Positive,mz_hmis_filtered$Population)%>%
+  mutate(date_ex=as.Date(as.yearmon(paste(Year, Month), "%Y %b")),
+         prop_pos = Positive/Tested)%>%
+  filter(date_ex>=as.Date('2020-12-1')&date_ex<=as.Date('2022-09-1'))%>%
+  dplyr::rename(district = District,
+                inc = mean)
+
+ng_hmis_filtered <- ng_hmis[!is.na(ng_hmis$year),]
+ng_hmis_forplot <- addCIs_inc(ng_hmis_filtered,ng_hmis_filtered$rdt_positive,ng_hmis_filtered$pop_est_micro)%>%
+  mutate(date=as.Date(period),
+         prop_pos = rdt_positive/rdt_tested)%>%
+  filter(date>=as.Date('2020-11-1')&date<=as.Date('2022-12-1'))%>%
+  dplyr::rename(date_ex = date,
+                district = lga,
+                inc = mean)
 
 colors_nets <- c(IG2 = "#1B9E77", Stdr = "#999999", PBO = "#D95F02")
 windows(10,4)
@@ -1067,29 +1158,6 @@ mz_hmis_forplot <- addCIs_inc(mz_hmis_filtered,mz_hmis_filtered$Positive,mz_hmis
          inc = mean)
 
 ##BF >5yo
-bf_hmis$date = as.yearmon(paste(bf_hmis$Year, bf_hmis$Month), "%Y %b")
-bf_hmis_all <- left_join(bf_hmis,bf_hmis_u5,by=c('date','district'),suffix=c('.allpop','.u5'))
-bf_hmis_all$positive_o5 <- bf_hmis_all$`RDT +`-bf_hmis_all$positive
-bf_hmis_forplot <- bf_hmis_all[bf_hmis_all$district %in% c('Banfora','Gaoua','Orodara')&bf_hmis_all$date>=as.yearmon('Sep 2020')&
-                             bf_hmis_all$date<=as.yearmon('Jun 2022')&!is.na(bf_hmis_all$Confirmed),]
-bf_hmis_forplot <- addCIs_inc(bf_hmis_forplot,bf_hmis_forplot$positive_o5,bf_hmis_forplot$population_2017)
-bf_hmis_forplot <- bf_hmis_forplot %>%
-  mutate(date_ex = as.Date(date, frac = 0),
-         prop_pos = positive_o5/(Tested-tested))%>%
-  dplyr::rename(inc = mean)
-BF_obsinc_plot <- create_obsinc_plots(bf_hmis_forplot,'BF')
-
-MZ_obsinc_plot <- create_obsinc_plots(mz_hmis_forplot,'MZ')
-ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/obsinc_mz_std_310223.pdf'), width = 7, height = 5)
-
-ng_hmis_filtered <- ng_hmis[!is.na(ng_hmis$year),]
-ng_hmis_forplot <- addCIs_inc(ng_hmis_filtered,ng_hmis_filtered$rdt_positive,ng_hmis_filtered$pop_est_micro)%>%
-  mutate(date=as.Date(period),
-         prop_pos = rdt_positive/rdt_tested)%>%
-  filter(date>=as.Date('2020-11-1')&date<=as.Date('2022-12-1'))%>%
-  dplyr::rename(date_ex = date,
-         district = lga,
-         inc = mean)
 
 NG_obsinc_plot <- create_obsinc_plots(ng_hmis_forplot,'NG')
 ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/obsinc_ng_std_310223.pdf'), width = 7, height = 5)
@@ -1114,7 +1182,7 @@ create_dashboard_plots <- function(results,prev_pg,prev_mg,prev_all=NULL,inciden
                         'Asa - IG2','Ejigbo - Standard','Ife North - PBO','Moro - RG')
   names(district_labels) <- unlist(district_list)
   dates_list <- list(BF = seq(as.Date('2020-9-1'),as.Date('2022-6-1'),by='months'),
-                     MZ = seq(as.Date('2020-12-1'),as.Date('2022-9-1'),by='months'),
+                     MZ = seq(as.Date('2020-07-1'),as.Date('2022-9-1'),by='months'),
                      NG = seq(as.Date('2020-11-1'),as.Date('2022-12-1'),by='months'))
   colors_list <- list(BF = c(Banfora = "#1B9E77", Gaoua = "#999999", Orodara = "#D95F02"),
                       MZ = c(Changara = "#D95F02", Chemba = "#999999", Guro = "#1B9E77"),
@@ -1433,7 +1501,7 @@ bf_dash <- create_dashboard_plots(results=seas_all_result_list,
                        country='BF')
 bf_dash
 ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/dash_bf_seas_060223.pdf'),plot=bf_dash, width = 12, height = 6)
-
+nnp_pgmg_bulk_sifter_betaa_results[[1]][["history"]][,1,1]
 mz_dash <- create_dashboard_plots(results=seas_all_result_list,
                                   prev_pg=nnp_pg_list,
                                   prev_mg=nnp_mg_list,
@@ -2208,3 +2276,275 @@ ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/dash_ng_pgmg_seas_080323.pdf'),
 ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/dash_ng_pgmg_seas_080323_pres.pdf'), plot = ng_pgmg_seas_dash$pres_dash, width = 12, height = 6)
 ng_pgmg_seas_dash$rel_dash
 ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/dash_ng_pgmg_seas_080323_rel.pdf'), plot = ng_pgmg_seas_dash$rel_dash, width = 12, height = 6)
+
+source('./nnp/create_plots_nnp.R')
+windows(30,15)
+names(nnp_pgmg_bulk_sifter_eir_results) <- names(nnp_pg_list)
+bf_pgmg_seas_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_eir_results,
+                                                prev_pg=nnp_pg_list,
+                                                prev_mg=nnp_mg_list,
+                                                coefs_pg_df = coefs_pg_df,
+                                                coefs_mg_df = coefs_mg_df,
+                                                incidence=bf_hmis_forplot,
+                                                cs_data_list = cs_data_list,
+                                                country='BF')
+bf_pgmg_seas_dash$full_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/dash_bf_pgmg_sifter_eir.pdf'), plot = bf_pgmg_seas_dash$full_dash, width = 12, height = 6)
+bf_pgmg_seas_dash$rel_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/rel_dash_bf_pgmg_sifter_eir.pdf'), plot = bf_pgmg_seas_dash$rel_dash, width = 12, height = 6)
+bf_pgmg_seas_dash$mcmc_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/mcmc_dash_bf_pgmg_sifter_eir.pdf'), plot = bf_pgmg_seas_dash$full_dash, width = 12, height = 6)
+
+bf_pgmg_seas_betaa_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_results,
+                                                prev_pg=nnp_pg_list,
+                                                prev_mg=nnp_mg_list,
+                                                coefs_pg_df = coefs_pg_df,
+                                                coefs_mg_df = coefs_mg_df,
+                                                incidence=bf_hmis_forplot,
+                                                cs_data_list = cs_data_list,
+                                                country='BF',
+                                                param='betaa')
+bf_pgmg_seas_betaa_dash$full_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/dash_bf_pgmg_sifter_betaa.pdf'), plot = bf_pgmg_seas_betaa_dash$full_dash, width = 12, height = 6)
+bf_pgmg_seas_betaa_dash$rel_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/rel_dash_bf_pgmg_sifter_betaa.pdf'), plot = bf_pgmg_seas_betaa_dash$rel_dash, width = 12, height = 6)
+bf_pgmg_seas_betaa_dash$mcmc_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/mcmc_dash_bf_pgmg_sifter_betaa.pdf'), plot = bf_pgmg_seas_betaa_dash$full_dash, width = 12, height = 6)
+
+
+mz_pgmg_seas_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_eir_results,
+                                                                                 prev_pg=nnp_pg_list,
+                                                                                 prev_mg=nnp_mg_list,
+                                                                                 coefs_pg_df = coefs_pg_df,
+                                                                                 coefs_mg_df = coefs_mg_df,
+                                                                                 incidence=mz_hmis_forplot,
+                                                                                 cs_data_list = cs_data_list,
+                                                                                 country='MZ')
+mz_pgmg_seas_dash$full_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/dash_mz_pgmg_sifter_eir.pdf'), plot = mz_pgmg_seas_dash$full_dash, width = 12, height = 6)
+mz_pgmg_seas_dash$rel_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/rel_dash_mz_pgmg_sifter_eir.pdf'), plot = mz_pgmg_seas_dash$rel_dash, width = 12, height = 6)
+mz_pgmg_seas_dash$mcmc_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/mcmc_dash_mz_pgmg_sifter_eir.pdf'), plot = mz_pgmg_seas_dash$mcmc_dash, width = 12, height = 6)
+
+
+mz_pgmg_seas_betaa_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_results,
+                                                      prev_pg=nnp_pg_list,
+                                                      prev_mg=nnp_mg_list,
+                                                      coefs_pg_df = coefs_pg_df,
+                                                      coefs_mg_df = coefs_mg_df,
+                                                      incidence=mz_hmis_forplot,
+                                                      cs_data_list = cs_data_list,
+                                                      country='MZ',
+                                                      param='betaa')
+mz_pgmg_seas_betaa_dash$full_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/dash_mz_pgmg_sifter_betaa.pdf'), plot = mz_pgmg_seas_betaa_dash$full_dash, width = 12, height = 6)
+mz_pgmg_seas_betaa_dash$rel_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/rel_dash_mz_pgmg_sifter_betaa.pdf'), plot = mz_pgmg_seas_betaa_dash$rel_dash, width = 12, height = 6)
+mz_pgmg_seas_betaa_dash$mcmc_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/mcmc_dash_mz_pgmg_sifter_betaa.pdf'), plot = mz_pgmg_seas_betaa_dash$mcmc_dash, width = 12, height = 6)
+
+ng_pgmg_seas_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_eir_results,
+                                                prev_pg=nnp_pg_list,
+                                                prev_mg=nnp_mg_list,
+                                                coefs_pg_df = coefs_pg_df,
+                                                coefs_mg_df = coefs_mg_df,
+                                                incidence=ng_hmis_forplot,
+                                                cs_data_list = cs_data_list,
+                                                country='NG')
+ng_pgmg_seas_dash$full_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/dash_ng_pgmg_sifter_eir.pdf'), plot = ng_pgmg_seas_dash$full_dash, width = 12, height = 6)
+ng_pgmg_seas_dash$rel_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/rel_dash_ng_pgmg_sifter_eir.pdf'), plot = ng_pgmg_seas_dash$rel_dash, width = 12, height = 6)
+ng_pgmg_seas_dash$mcmc_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/mcmc_dash_ng_pgmg_sifter_eir.pdf'), plot = ng_pgmg_seas_dash$mcmc_dash, width = 12, height = 6)
+
+ng_pgmg_seas_betaa_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_results,
+                                                      prev_pg=nnp_pg_list,
+                                                      prev_mg=nnp_mg_list,
+                                                      coefs_pg_df = coefs_pg_df,
+                                                      coefs_mg_df = coefs_mg_df,
+                                                      incidence=ng_hmis_forplot,
+                                                      cs_data_list = cs_data_list,
+                                                      country='NG',
+                                                      param='betaa')
+ng_pgmg_seas_betaa_dash$full_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/dash_ng_pgmg_sifter_betaa.pdf'), plot = ng_pgmg_seas_betaa_dash$full_dash, width = 12, height = 6)
+ng_pgmg_seas_betaa_dash$rel_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/rel_dash_ng_pgmg_sifter_betaa.pdf'), plot = ng_pgmg_seas_betaa_dash$rel_dash, width = 12, height = 6)
+ng_pgmg_seas_betaa_dash$mcmc_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/mcmc_dash_ng_pgmg_sifter_betaa.pdf'), plot = ng_pgmg_seas_betaa_dash$mcmc_dash, width = 12, height = 6)
+nnp_pgmg_bulk_sifter_betaa_results[[7]]
+
+ratio <- nnp_pgmg_bulk_sifter_betaa_results[[1]]$history['EIR',600,]/nnp_pgmg_bulk_sifter_betaa_results[[1]]$history['betaa',600,]
+plot(ratio)
+ratio[1:15]
+plot(ratio[200:400])
+
+###tests###
+bf_pgmg_seas_betaa_test1_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_test1_results,
+                                                      prev_pg=nnp_pg_list,
+                                                      prev_mg=nnp_mg_list,
+                                                      coefs_pg_df = coefs_pg_df,
+                                                      coefs_mg_df = coefs_mg_df,
+                                                      incidence=bf_hmis_forplot,
+                                                      cs_data_list = cs_data_list,
+                                                      burnin = 0,
+                                                      sample_size = 50,
+                                                      chain_length = 50,
+                                                      country='BF',
+                                                      param='betaa')
+windows(12,6)
+names(nnp_pg_list) <- names(nnp_mg_list) <- names(nnp_pgmg_bulk_sifter_betaa_test1_results) <- district_list <- c('Banfora','Gaoua','Orodara','Changara','Chemba','Guro','Asa','Ejigbo','Ife North','Moro')
+
+bf_pgmg_seas_betaa_test1_dash$rel_dash
+bf_pgmg_seas_betaa_test1_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_test1_results,
+                                                            prev_pg=nnp_pg_list,
+                                                            prev_mg=nnp_mg_list,
+                                                            coefs_pg_df = coefs_pg_df,
+                                                            coefs_mg_df = coefs_mg_df,
+                                                            incidence=bf_hmis_forplot,
+                                                            cs_data_list = cs_data_list,
+                                                            burnin = 0,
+                                                            sample_size = 50,
+                                                            chain_length = 50,
+                                                            country='BF',
+                                                            param='betaa')
+windows(12,6)
+mz_pgmg_seas_betaa_test1_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_test1_results,
+                                                            prev_pg=nnp_pg_list,
+                                                            prev_mg=nnp_mg_list,
+                                                            coefs_pg_df = coefs_pg_df,
+                                                            coefs_mg_df = coefs_mg_df,
+                                                            incidence=mz_hmis_forplot,
+                                                            cs_data_list = cs_data_list,
+                                                            burnin = 0,
+                                                            sample_size = 50,
+                                                            chain_length = 50,
+                                                            country='MZ',
+                                                            param='betaa')
+windows(12,6)
+mz_pgmg_seas_betaa_test1_dash$rel_dash
+
+ng_pgmg_seas_betaa_test1_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_test1_results,
+                                                            prev_pg=nnp_pg_list,
+                                                            prev_mg=nnp_mg_list,
+                                                            coefs_pg_df = coefs_pg_df,
+                                                            coefs_mg_df = coefs_mg_df,
+                                                            incidence=ng_hmis_forplot,
+                                                            cs_data_list = cs_data_list,
+                                                            burnin = 0,
+                                                            sample_size = 50,
+                                                            chain_length = 50,
+                                                            country='NG',
+                                                            param='betaa')
+windows(12,6)
+ng_pgmg_seas_betaa_test1_dash$rel_dash
+
+nnp_pgmg_bulk_sifter_betaa_max125_results
+
+bf_pgmg_sifter_betaa_max125_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_max125_results,
+                                                               prev_pg=nnp_pg_list,
+                                                               prev_mg=nnp_mg_list,
+                                                               coefs_pg_df = coefs_pg_df,
+                                                               coefs_mg_df = coefs_mg_df,
+                                                               incidence=bf_hmis_forplot,
+                                                               cs_data_list = cs_data_list,
+                                                               burnin = 100,
+                                                               sample_size = 100,
+                                                               chain_length = 1000,
+                                                               country='BF',
+                                                               param='betaa')
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/rel_dash_bf_pgmg_sifter_betaa_max125.pdf'), plot = bf_pgmg_sifter_betaa_max125_dash$rel_dash, width = 12, height = 6)
+bf_pgmg_sifter_betaa_max125_dash$mcmc_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/full_dash_bf_pgmg_sifter_betaa_max125.pdf'), plot = bf_pgmg_sifter_betaa_max125_dash$full_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/mcmc_dash_bf_pgmg_sifter_betaa_max125.pdf'), plot = bf_pgmg_sifter_betaa_max125_dash$mcmc_dash, width = 6, height = 6)
+
+mz_pgmg_sifter_betaa_max125_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_max125_results,
+                                                               prev_pg=nnp_pg_list,
+                                                               prev_mg=nnp_mg_list,
+                                                               coefs_pg_df = coefs_pg_df,
+                                                               coefs_mg_df = coefs_mg_df,
+                                                               incidence=mz_hmis_forplot,
+                                                               cs_data_list = cs_data_list,
+                                                               burnin = 100,
+                                                               sample_size = 100,
+                                                               chain_length = 1000,
+                                                               country='MZ',
+                                                               param='betaa')
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/rel_dash_mz_pgmg_sifter_betaa_max125.pdf'), plot = mz_pgmg_sifter_betaa_max125_dash$rel_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/full_dash_mz_pgmg_sifter_betaa_max125.pdf'), plot = mz_pgmg_sifter_betaa_max125_dash$full_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/mcmc_dash_mz_pgmg_sifter_betaa_max125.pdf'), plot = mz_pgmg_sifter_betaa_max125_dash$mcmc_dash, width = 6, height = 6)
+ng_pgmg_sifter_betaa_max125_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_max125_results,
+                                                            prev_pg=nnp_pg_list,
+                                                            prev_mg=nnp_mg_list,
+                                                            coefs_pg_df = coefs_pg_df,
+                                                            coefs_mg_df = coefs_mg_df,
+                                                            incidence=ng_hmis_forplot,
+                                                            cs_data_list = cs_data_list,
+                                                            burnin = 100,
+                                                            sample_size = 100,
+                                                            chain_length = 1000,
+                                                            country='NG',
+                                                            param='betaa')
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/rel_dash_ng_pgmg_sifter_betaa_2407.pdf'), plot = ng_pgmg_sifter_betaa_2407_dash$rel_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/full_dash_ng_pgmg_sifter_betaa_2407.pdf'), plot = ng_pgmg_sifter_betaa_2407_dash$full_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/mcmc_dash_ng_pgmg_sifter_betaa_2407.pdf'), plot = ng_pgmg_sifter_betaa_2407_dash$mcmc_dash, width = 6, height = 6)
+windows(12,6)
+ng_pgmg_seas_betaa_test1_dash$rel_dash
+
+names(nnp_pgmg_bulk_sifter_betaa_2407_results) <- district_list
+bf_pgmg_sifter_betaa_2407_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_2407_results,
+                                                               prev_pg=nnp_pg_list,
+                                                               prev_mg=nnp_mg_list,
+                                                               coefs_pg_df = coefs_pg_df,
+                                                               coefs_mg_df = coefs_mg_df,
+                                                               incidence=bf_hmis_forplot,
+                                                               cs_data_list = cs_data_list,
+                                                               burnin = 100,
+                                                               sample_size = 100,
+                                                               chain_length = 1000,
+                                                               country='BF',
+                                                               param='betaa')
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/rel_dash_bf_pgmg_sifter_betaa_2407.pdf'), plot = bf_pgmg_sifter_betaa_2407_dash$rel_dash, width = 12, height = 6)
+windows(12,6)
+bf_pgmg_sifter_betaa_2407_dash$full_dash
+
+bf_pgmg_sifter_betaa_2407_dash$mcmc_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/full_dash_bf_pgmg_sifter_betaa_2407.pdf'), plot = bf_pgmg_sifter_betaa_2407_dash$full_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/mcmc_dash_bf_pgmg_sifter_betaa_2407.pdf'), plot = bf_pgmg_sifter_betaa_2407_dash$mcmc_dash, width = 6, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/overlay_bf_pgmg_sifter_betaa_2407.pdf'), plot = bf_pgmg_sifter_betaa_2407_dash$overlay_plot, width = 12, height = 6)
+
+bf_pgmg_sifter_betaa_2407_dash$overlay_plot
+
+mz_pgmg_sifter_betaa_2407_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_2407_results,
+                                                               prev_pg=nnp_pg_list,
+                                                               prev_mg=nnp_mg_list,
+                                                               coefs_pg_df = coefs_pg_df,
+                                                               coefs_mg_df = coefs_mg_df,
+                                                               incidence=mz_hmis_forplot,
+                                                               cs_data_list = cs_data_list,
+                                                               burnin = 100,
+                                                               sample_size = 100,
+                                                               chain_length = 1000,
+                                                               country='MZ',
+                                                               param='betaa')
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/rel_dash_mz_pgmg_sifter_betaa_2407.pdf'), plot = mz_pgmg_sifter_betaa_2407_dash$rel_dash, width = 12, height = 6)
+mz_pgmg_sifter_betaa_2407_dash$full_dash
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/full_dash_mz_pgmg_sifter_betaa_2407.pdf'), plot = mz_pgmg_sifter_betaa_2407_dash$full_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/mcmc_dash_mz_pgmg_sifter_betaa_2407.pdf'), plot = mz_pgmg_sifter_betaa_2407_dash$mcmc_dash, width = 6, height = 6)
+ng_pgmg_sifter_betaa_2407_dash <- create_dashboard_plots_nnp(results=nnp_pgmg_bulk_sifter_betaa_2407_results,
+                                                               prev_pg=nnp_pg_list,
+                                                               prev_mg=nnp_mg_list,
+                                                               coefs_pg_df = coefs_pg_df,
+                                                               coefs_mg_df = coefs_mg_df,
+                                                               incidence=ng_hmis_forplot,
+                                                               cs_data_list = cs_data_list,
+                                                               burnin = 100,
+                                                               sample_size = 100,
+                                                               chain_length = 1000,
+                                                               country='NG',
+                                                               param='betaa')
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/rel_dash_ng_pgmg_sifter_betaa_2407.pdf'), plot = ng_pgmg_sifter_betaa_2407_dash$rel_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/full_dash_ng_pgmg_sifter_betaa_2407.pdf'), plot = ng_pgmg_sifter_betaa_2407_dash$full_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/nnp/figures/obs_prev/mcmc_dash_ng_pgmg_sifter_betaa_2407.pdf'), plot = ng_pgmg_sifter_betaa_2407_dash$mcmc_dash, width = 6, height = 6)
