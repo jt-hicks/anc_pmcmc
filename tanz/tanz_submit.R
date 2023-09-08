@@ -28,6 +28,9 @@ ctx <- context::context_save("T:/jth/contexts.190423", sources = sources,
 ctx <- context::context_save("T:/jth/contexts.230623", sources = sources,
                                     packages = c('dplyr','statmod','coda','zoo','lubridate','stringi','dde'),
                                     package_sources = conan::conan_sources(c('mrc-ide/mode','mrc-ide/dust',"mrc-ide/odin.dust",'mrc-ide/mcstate')))
+ctx <- context::context_save("T:/jth/contexts_may23", sources = sources,
+                             packages = c('dplyr','statmod','coda','zoo','lubridate','stringi','dde'),
+                             package_sources = conan::conan_sources(c('mrc-ide/mode','mrc-ide/dust',"mrc-ide/odin.dust",'mrc-ide/mcstate')))
 
 config_1 <- didehpc::didehpc_config(template = "24Core",cores =6, parallel = TRUE,wholenode = FALSE, cluster = 'fi--didemrchnb')
 # config_dide <- didehpc::didehpc_config(template = "8Core",cores =1, parallel = TRUE,wholenode = FALSE, cluster = 'fi--dideclusthn')
@@ -225,12 +228,37 @@ tanz_all_2015to2022_submit$status()#'uncrystallisable_africancivet'
 tanz_all_2015to2022_submit$status()#'sharpwitted_mite' <- added incidence <5 yo
 tanz_all_2015to2022_submit$tasks$`3a53a5cfb7eb3d51302a5fa94dd8454e`$log()
 tanz_all_2015to2022_submit <- obj$task_bundle_get('sharpwitted_mite')
+obj$task_bundle_list()
 tanz_all_2015to2022_results <- lapply(1:25, function(id){
   tanz_all_2015to2022_submit$tasks[[id]]$result()
 })
-
+tanz_all_2015to2022_results[[1]]$history[,1,1]
 names(tanz_all_2015to2022_results) <- gsub(' Region','',names(tanz_data_list_15to22))
+zoomin_results <- tanz_all_2015to2022_results[c('Lindi','Mtwara','Ruvuma')]
+mcmc_sample <- sample(c(201:1000), 100)
+lindi_init_eir <- data.frame(init_EIR=exp(zoomin_results$Lindi$mcmc$log_init_EIR[mcmc_sample]),
+                             sample_index = mcmc_sample)
+lindi_eir_history <- data.frame(cbind(zoomin_results$Lindi$times[-1],t(zoomin_results$Lindi$history['EIR',mcmc_sample,-1])))
+names(lindi_eir_history) <- c('t',mcmc_sample)
+lindi_eir_history$date <- tanz_data_list_15to22$`Lindi Region`$month
 
+mtwara_init_eir <- data.frame(init_EIR=exp(zoomin_results$Mtwara$mcmc$log_init_EIR[mcmc_sample]),
+                             sample_index = mcmc_sample)
+mtwara_eir_history <- data.frame(cbind(zoomin_results$Mtwara$times[-1],t(zoomin_results$Mtwara$history['EIR',mcmc_sample,-1])))
+names(mtwara_eir_history) <- c('t',mcmc_sample)
+mtwara_eir_history$date <- tanz_data_list_15to22$`Mtwara Region`$month
+
+ruvuma_init_eir <- data.frame(init_EIR=exp(zoomin_results$Ruvuma$mcmc$log_init_EIR[mcmc_sample]),
+                             sample_index = mcmc_sample)
+ruvuma_eir_history <- data.frame(cbind(zoomin_results$Ruvuma$times[-1],t(zoomin_results$Ruvuma$history['EIR',mcmc_sample,-1])))
+names(ruvuma_eir_history) <- c('t',mcmc_sample)
+ruvuma_eir_history$date <- tanz_data_list_15to22$`Ruvuma Region`$month
+
+saveRDS(list(init_EIR=lindi_init_eir,EIR_history=lindi_eir_history),'./tanz/lindi_eirs_4pw.rds')
+saveRDS(list(init_EIR=mtwara_init_eir,EIR_history=mtwara_eir_history),'./tanz/mtwara_eirs_4pw.rds')
+saveRDS(list(init_EIR=ruvuma_init_eir,EIR_history=ruvuma_eir_history),'./tanz/ruvuma_eirs_4pw.rds')
+
+str(t(zoomin_results$Lindi$history['EIR',501:1000,-1]))
 ##Get den
 run_pmcmc(data_raw = tanz_data_list_15to22[[1]],
           n_particles = 200,

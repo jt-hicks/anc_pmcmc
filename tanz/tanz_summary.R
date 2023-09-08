@@ -695,7 +695,7 @@ colors_2 <- c('Women tested' = "#33A02C", 'Women attended (all visits)' = "#B2DF
               'Women attended (first visits)' = "#B2DF8A",
               'Facilities reporting' = "#1F78B4",'Normalised rainfall' = "#1582AD", 'Observed prevalence' = '#6D6A67',
               'Fitted prevalence' = "#EFBB12", 'Estimated incidence' = "#CE5126")
-obs_tested_plot_dist <- ggplot(lindi_mtwara)+
+obs_tested_plot_dist <- ggplot(lindi_mtwara_ruvuma)+
   geom_line(aes(x=as.Date(as.yearmon(yearmon)),y=tested,color='Women tested'),size=1)+
   # geom_line(aes(x=as.Date(as.yearmon(yearmon)),y=total,color='Women attended (all visits)'),size=1)+
   geom_line(aes(x=as.Date(as.yearmon(yearmon)),y=first_visit_total,color='Women attended (first visits)'),size=1)+

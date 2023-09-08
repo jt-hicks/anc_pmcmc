@@ -161,41 +161,44 @@ diagnostic_plots$EIR_SD.trace
 diagnostic_plots$init_EIR.trace
 diagnostic_plots$EIR_SD.density
 diagnostic_plots$init_EIR.density
-tanga_rainfall <- read_csv('./tanz/processed_inputs/ANC_data_Rainfall_ad1_2022.csv')%>%
-  filter(region == 'Tanga Region')%>%
-  select(yearmon,region,Region,ID,Rainfall)
+tanga_rainfall <- read_csv('./tanz/Patrick/processed_inputs/rainfall_ad2.csv')%>%
+  filter(NAME_1 == 'Tanga')%>%
+  select(Month,NAME_1,NAME_2,ID,Rainfall)
+tanga_itn <- read_csv('C:/Users/jthicks/OneDrive - Imperial College London/Imperial_ResearchAssociate/PregnancyModel/Tanzania/Tanga/tanga_itn_access.csv')
+names(tanga_itn) <- c('region','sites','date','itn_access')
 source('./tanz/create_summary_plots.R')
 tanga_plots <- create_summary_plots(results = tanga_clust_290623_results,
                                     data_list = tanga_data_list_15to22[1:11],
                                     level = 'Council',
                                     rainfall = tanga_rainfall,
+                                    itn_access = tanga_itn,
                                     start_pf_time = 30*4,
                                     date_limits = c('2018-01-01',NA))
 windows(10,10)
 obs <- tanga_plots$obs_prev_plot
 obs
-ggsave('tanz/figures/obsprev_tanga_290623.pdf',plot = obs,width = 8,height=5)
+ggsave('tanz/figures/obsprev_tanga_290623.pdf',plot = obs,width = 9,height=6)
 
 est_prev <- tanga_plots$est_prev_plot
 est_prev
-ggsave('tanz/figures/estprev_tanga_290623.pdf',plot = est_prev,width = 8,height=5)
+ggsave('tanz/figures/estprev_tanga_290623.pdf',plot = est_prev,width = 9,height=6)
 
 inc <- tanga_plots$inc.rainfall
 inc
-ggsave('tanz/figures/inc_tanga_290623.pdf',plot = inc,width = 8,height=5)
+ggsave('tanz/figures/inc_tanga_290623.pdf',plot = inc,width = 9,height=6)
 
 rel_inc <- tanga_plots$inc.rainfall.3
 rel_inc
-ggsave('tanz/figures/relinc_tanga_290623.pdf',plot = rel_inc,width = 8,height=5)
+ggsave('tanz/figures/relinc_tanga_290623.pdf',plot = rel_inc,width = 9,height=6)
 
 eir <- tanga_plots$eir.rainfall
 eir
-ggsave('tanz/figures/eir_tanga_290623.pdf',plot = eir,width = 8,height=5)
+ggsave('tanz/figures/eir_tanga_290623.pdf',plot = eir,width = 9,height=6)
 
 eir_sd <- tanga_plots$EIR_SD.density
 eir_sd
-ggsave('tanz/figures/eirsd_tanga_290623.pdf',plot = eir_sd,width = 8,height=5)
+ggsave('tanz/figures/eirsd_tanga_290623.pdf',plot = eir_sd,width = 9,height=6)
 
 init_eir <- tanga_plots$init_EIR.density
 init_eir
-ggsave('tanz/figures/initEIR_tanga_290623.pdf',plot = init_eir,width = 8,height=5)
+ggsave('tanz/figures/initEIR_tanga_290623.pdf',plot = init_eir,width = 9,height=6)

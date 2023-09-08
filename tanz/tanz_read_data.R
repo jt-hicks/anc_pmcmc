@@ -69,7 +69,7 @@ tanz_data_all_2017_region <- read_csv("./tanz/Patrick/processed_inputs/TZ_ANC_da
 tanz_data_all_16to22_region <- read_csv("./tanz/Patrick/processed_inputs/TZ_ANC_data_region_2016_2022.csv")
 
 tanz_data_all_14to22_region <- bind_rows(tanz_data_all_2017_region,tanz_data_all_16to22_region)%>%
-  rename(region = Region)
+  dplyr::rename(region = Region)
 
 ##Combine old and new data sets - district councils
 tanz_data_all_2017_district <- read_csv("./tanz/Patrick/processed_inputs/TZ_ANC_data_district_2014_2017.csv")%>%
@@ -104,7 +104,7 @@ tanz_data_process_allonly <- function(data, level = c('District','Region'), remo
 }
 
 tanz_data_list_15to22 <- tanz_data_process_allonly(tanz_data_all_14to22_region,remove_before = as.yearmon('Jan 2015'),level='Region')
-
+saveRDS(tanz_data_list_15to22,'./tanz/tanz_data_list_15to22.rds')
 tanga_only <- tanz_data_all_14to22_district%>%
   filter(Region=='Tanga Region')%>%
   rename(region = Region,
