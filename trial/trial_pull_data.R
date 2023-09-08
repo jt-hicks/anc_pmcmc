@@ -17,12 +17,20 @@ WA_select_var<-W_africa_data%>%select(studyid,country,site,age,gravidity,fundal_
 ##Summarise number of rdt tests and positives by month, gravidity, and location
 WA_grouped<-WA_select_var%>%
   dplyr::filter(!is.na(gravidity))%>%
-  mutate(month=as.yearmon(screen0_date,"%d/%m/%Y"))%>%
+  dplyr::mutate(month=as.yearmon(screen0_date,"%d/%m/%Y"))%>%
   group_by(site,month,gravidity)%>%
-  summarise(positive=sum(v0_result=="positive"),tested=sum(v0_result%in%c("positive","negative")))%>%
+  dplyr::summarise(positive=sum(v0_result=="positive"),tested=sum(v0_result%in%c("positive","negative")))%>%
   ungroup()%>%
-  mutate(site = ifelse(site=='Burkina','Burkina Faso',site),
-         test_type = 'Slide')
+  dplyr::mutate(site = ifelse(site=='Burkina','Burkina Faso',site),
+         test_type = 'Slide')%>%
+  filter(!(site=='Gambia'&month==as.yearmon('Jun 2010')))
+WA_grouped %>%
+  group_by(site)%>%
+  summarise(start=min(month),
+            end=max(month),
+            total=sum(tested),
+            tot.pos = sum(positive),
+            prev = round(sum(positive)/sum(tested) * 100,1))
 WA_grouped_rdt<-WA_select_var%>%
   dplyr::filter(!is.na(gravidity))%>%
   mutate(month=as.yearmon(screen0_date,"%d/%m/%Y"))%>%
@@ -98,21 +106,45 @@ WA_grouped_mod <- WA_grouped %>%
 ##W Kenya
 anc_wkenya <- haven::read_sas('./trial/Data/book_screen_ses_ms.sas7bdat')
 table(anc_wkenya$RDT)
-anc_wkenya_select_var<-anc_wkenya%>%select(IDNumber,datevisit,Primi,Parity,gravidity,RDT)
+anc_wkenya_select_var<-anc_wkenya%>%select(IDNumber,datevisit,Primi,Parity,gravidity,RDT,patent)
 table(anc_wkenya_select_var$gravidity,anc_wkenya_select_var$Parity,useNA='always')
 table(anc_wkenya_select_var$Primi,useNA='always')
 names(anc_wkenya)
 wkenya_group <- anc_wkenya%>%
-  dplyr::filter(!is.na(Primi)&!is.na(RDT))%>%
+  dplyr::filter(!is.na(Primi)&!is.na(patent))%>%
   mutate(month=as.yearmon(datevisit),
          grav_cat = ifelse(Primi=='Y','pg','mg'))%>%
   group_by(month,grav_cat)%>%
-  summarise(positive=sum(RDT=='positive'),tested=sum(RDT%in%c('positive','negative')))%>%
+  summarise(positive=sum(patent==1),tested=sum(patent%in%c(0,1)))%>%
   mutate(site='Kenya')%>%
   ungroup()%>%
   mutate(grav_cat=factor(grav_cat,levels=c('pg','sg','mg')),
          grav_dich=factor(ifelse(grav_cat=='pg','pg','mg'),levels=c('pg','mg')),
          prev = positive/tested)
+
+##Split dataframes into two lists by site, one for each grav level
+EA_grouped <- plyr::rbind.fill(malawi_grouped,wkenya_group) %>%
+  select(month,grav_cat,positive,tested,site)
+EA_grouped %>%
+  group_by(site)%>%
+  summarise(start=min(month),
+            end=max(month),
+            total=sum(tested),
+            tot.pos = sum(positive),
+            prev = round(sum(positive)/sum(tested) * 100,1))
+EA_grouped_pg <- EA_grouped%>%
+  filter(grav_cat=='pg')%>%
+  group_by(site)
+EA_pg_data_list <- split(EA_grouped_pg, f = EA_grouped_pg$site)
+EA_grouped_mg <- EA_grouped%>%
+  filter(grav_cat=='mg')%>%
+  group_by(site)
+EA_mg_data_list <- split(EA_grouped_mg, f = EA_grouped_mg$site)
+
+saveRDS(EA_pg_data_list,'trial/Data/EA_pg_data_list.rds')
+saveRDS(EA_mg_data_list,'trial/Data/EA_mg_data_list.rds')
+
+
 all_prev <- plyr::rbind.fill(WA_grouped_mod,malawi_grouped,wkenya_group)%>%
   mutate(grav_cat=factor(grav_cat,levels=c('pg','sg','mg')),
          grav_dich=factor(ifelse(grav_cat=='pg','pg','mg'),levels=c('pg','mg'),labels=c('Primigrav','Multigrav')),
@@ -153,6 +185,15 @@ istp_rainfall_wa <- read_csv('./trial/Data/All_ISTp_rainfall.csv')%>%
   mutate(rel_rainfall = Rainfall/max(Rainfall),
          site = factor(site,levels = c('Ghana', 'Burkina Faso', 'Mali', 'Gambia')))
 
+istp_rainfall_ea <- read_csv('./trial/Data/All_ISTp_rainfall.csv')%>%
+  filter(between(as.yearmon(Month),min(EA_grouped$month),max(EA_grouped$month)))%>%
+  filter(Country %in% c('Kenya','Malawi'))%>%
+  rename(site=Country)%>%
+  group_by(site)%>%
+  mutate(rel_rainfall = Rainfall/max(Rainfall),
+         site = factor(site,levels = c('Kenya','Malawi')),
+         Country = site)
+write.csv(istp_rainfall_ea,'./trial/Data/EA_ISTp_rainfall.csv' )
 
 table(all_prev$site,all_prev$grav_cat,useNA = 'always')
 windows(10,8)

@@ -22,17 +22,31 @@ theme_set(theme_minimal()+
 
 create_diag_figs <- function(result,country,district){
   print('acceptance rate')
-  print(1 - coda::rejectionRate(as.mcmc(result$mcmc)))
+  ar <- 1 - coda::rejectionRate(as.mcmc(result$mcmc))
+  print(ar)
   print('effective size')
-  print(coda::effectiveSize(as.mcmc(result$mcmc)))
+  ess <- coda::effectiveSize(as.mcmc(result$mcmc))
+  print(ess)
   
   title <- paste0('Diagnostic plots for seasonal model - ',district,', ',country)
-  
-  diag <- ((bayesplot::mcmc_trace(result$mcmc[51:1000,],pars = 'log_prior')+mcmc_dens(result$mcmc[51:1000,],pars = 'log_prior'))/
-             (bayesplot::mcmc_trace(result$mcmc[51:1000,],pars = 'log_likelihood')+mcmc_dens(result$mcmc[51:1000,],pars = 'log_likelihood'))/
-             (bayesplot::mcmc_trace(result$mcmc[51:1000,],pars = 'log_posterior')+mcmc_dens(result$mcmc[51:1000,],pars = 'log_posterior'))/
-             (bayesplot::mcmc_trace(result$mcmc[51:1000,],pars = 'EIR_SD')+mcmc_dens(result$mcmc[51:1000,],pars = 'EIR_SD'))/
-             (bayesplot::mcmc_trace(result$mcmc[51:1000,],pars = 'log_init_EIR')+mcmc_dens(result$mcmc[51:1000,],pars = 'log_init_EIR'))) + 
+  pars_list <- c('log_prior','log_likelihood','log_posterior','volatility','log_init_EIR')
+  trace_plots <- lapply(pars_list, function(x){
+    bayesplot::mcmc_trace(result$mcmc[51:1000,],pars = x) + 
+      ggtitle(paste0(x,' / AR: ',round(ar[x],3),' / ESS: ',round(ess[x],1)))+
+      theme(title = element_text(size=6),
+            axis.title.y = element_blank())
+  })
+  dense_plots <- lapply(pars_list, function(x){
+    bayesplot::mcmc_dens(result$mcmc[51:1000,],pars = x) + 
+      ggtitle(paste0(x,' / AR: ',round(ar[x],2),' / ESS: ',round(ess[x],1)))+
+      theme(title = element_text(size=6),
+            axis.title.x = element_blank())
+  })
+  diag <- (trace_plots[[1]]+dense_plots[[1]])/
+    (trace_plots[[2]]+dense_plots[[2]])/
+    (trace_plots[[3]]+dense_plots[[3]])/
+    (trace_plots[[4]]+dense_plots[[4]])/
+    (trace_plots[[5]]+dense_plots[[5]]) +
     plot_layout(guides = "collect") + plot_annotation(title = title)
   
   
@@ -46,6 +60,9 @@ diag_wa_pg_seas_padded_plots <- lapply(1:4,function(i) create_diag_figs(wa_pg_se
 diag_gamb_pg_seas_plots <- create_diag_figs(wa_pg_gamb_seas$result(),country = '',district = 'Gambia')
 diag_wa_pg_bulk_seas_090623_plots <- lapply(1:4,function(i) create_diag_figs(wa_pg_bulk_seas_090623_result_list[[i]],country = '',district = names(WA_pg_data_list[i])))
 diag_wa_all_bulk_seas_090623_plots <- lapply(1:4,function(i) create_diag_figs(wa_all_bulk_seas_090623_result_list[[i]],country = '',district = names(WA_pg_data_list[i])))
+diag_wa_pgsg_bulk_sifter_betaa_plots <- lapply(1:4,function(i) create_diag_figs(wa_pgsg_bulk_sifter_betaa_results[[i]],country = '',district = names(WA_pg_data_list[i])))
+diag_wa_pgsg_bulk_sifter_betaa_2407_plots <- lapply(1:4,function(i) create_diag_figs(wa_pgsg_bulk_sifter_betaa_2407_results[[i]],country = '',district = names(WA_pg_data_list[i])))
+
 
 str(wa_pg_bulk_seas_090623_result_list[[1]]$mcmc)
 windows(15,15)
@@ -73,6 +90,45 @@ diag_wa_all_bulk_seas_090623_plots[1]
 diag_wa_all_bulk_seas_090623_plots[2]
 diag_wa_all_bulk_seas_090623_plots[3]
 diag_wa_all_bulk_seas_090623_plots[4]
+windows(15,15)
+diag_wa_pgsg_bulk_sifter_betaa_plots[1]
+windows(15,15)
+diag_wa_pgsg_bulk_sifter_betaa_plots[2]
+windows(15,15)
+diag_wa_pgsg_bulk_sifter_betaa_plots[3]
+windows(15,15)
+diag_wa_pgsg_bulk_sifter_betaa_plots[4]
+diag_wa_pgsg_bulk_sifter_betaa_plots
+diag_wa_pgsg_bulk_sifter_betaa_max125_plots <- lapply(1:4,function(i) create_diag_figs(wa_pgsg_bulk_sifter_betaa_max125_results[[i]],country = '',district = names(WA_pg_data_list[i])))
+for(i in 1:4){
+  ggsave(filename=gsub(' ','',paste0('./trial/figures/Diagnostic/diag_wa_pgsg_bulk_sifter_betaa_max125_',names(wa_pgsg_bulk_sifter_betaa_max125_results[i]),'.pdf')),
+         plot=diag_wa_pgsg_bulk_sifter_betaa_max125_plots[[i]],
+         width=10,height=10,units='in')
+}
+for(i in 1:4){
+  ggsave(filename=gsub(' ','',paste0('./trial/figures/Diagnostic/diag_wa_pgsg_bulk_sifter_betaa_2407_',names(wa_pgsg_bulk_sifter_betaa_2407_results[i]),'.pdf')),
+         plot=diag_wa_pgsg_bulk_sifter_betaa_2407_plots[[i]],
+         width=10,height=10,units='in')
+}
+diag_ea_pgmg_bulk_sifter_eir_max2000_plots <- lapply(1:2,function(i) create_diag_figs(ea_pgmg_bulk_sifter_eir_max2000_results[[i]],country = '',district = names(EA_pg_data_list[i])))
+for(i in 1:2){
+  ggsave(filename=gsub(' ','',paste0('./trial/figures/Diagnostic/diag_ea_pgmg_bulk_sifter_eir_max2000_',names(ea_pgmg_bulk_sifter_eir_max2000_results[i]),'.pdf')),
+         plot=diag_ea_pgmg_bulk_sifter_eir_max2000_plots[[i]],
+         width=10,height=10,units='in')
+}
+
+diag_ea_pgmg_bulk_sifter_betaa_max125_plots <- lapply(1:2,function(i) create_diag_figs(ea_pgmg_bulk_sifter_betaa_max125_results[[i]],country = '',district = names(EA_pg_data_list[i])))
+for(i in 1:2){
+  ggsave(filename=gsub(' ','',paste0('./trial/figures/Diagnostic/diag_ea_pgmg_bulk_sifter_betaa_max125_',names(ea_pgmg_bulk_sifter_betaa_max125_results[i]),'.pdf')),
+         plot=diag_ea_pgmg_bulk_sifter_betaa_max125_plots[[i]],
+         width=10,height=10,units='in')
+}
+diag_ea_pgmg_bulk_sifter_betaa_2407_plots <- lapply(1:2,function(i) create_diag_figs(ea_pgmg_bulk_sifter_betaa_2407_results[[i]],country = '',district = names(EA_pg_data_list[i])))
+for(i in 1:2){
+  ggsave(filename=gsub(' ','',paste0('./trial/figures/Diagnostic/diag_ea_pgmg_bulk_sifter_betaa_2407_',names(ea_pgmg_bulk_sifter_betaa_2407_results[i]),'.pdf')),
+         plot=diag_ea_pgmg_bulk_sifter_betaa_2407_plots[[i]],
+         width=10,height=10,units='in')
+}
 
 ##Create dashboard by country
 results <- wa_pg_bulk_seas_090623_result_list
@@ -81,7 +137,8 @@ prev_mg <- WA_sg_data_list
 
 create_dashboard_plots <- function(results,prev_pg=WA_pg_data_list,prev_mg=WA_sg_data_list){
   coefs_pg_df <- as.data.frame(readRDS('./nnp/Corr/pg_corr_sample.RDS'))
-
+  coefs_mg_df <- as.data.frame(readRDS('./nnp/Corr/sg_corr_sample.RDS'))
+  
   ## fn to return prevalence from log_odds
   get_prev_from_log_odds<-function(log_odds){
     return(exp(log_odds)/(1+exp(log_odds)))
@@ -111,22 +168,29 @@ create_dashboard_plots <- function(results,prev_pg=WA_pg_data_list,prev_mg=WA_sg
                                month = character())
   
   for(i in 1:4){
-    prev_history <- data.frame(t(results[[i]]$history['prev', 51:1000, -1]))
+    prev_history <- data.frame(t(results[[i]]$history['prev_05', 51:1000, -1]))
     dates <- WA_pg_data_list[[i]]$month
     
     long_prev_sum <- prev_history%>%
       mutate(t=c(1:nrow(prev_history)))%>%
       melt(id='t')%>%
-      rename(time=t)%>%
+      dplyr::rename(time=t)%>%
       mutate(logodds_child = log(get_odds_from_prev(value)),
              prev_pg = rowMedians(as.matrix(sapply(1:nrow(coefs_pg_df), function(x){
                prev_preg <- get_prev_from_log_odds(logodds_child+coefs_pg_df$gradient[x]*(logodds_child-coefs_pg_df$av_lo_child[x])+coefs_pg_df$intercept[x])
+             }))),
+             prev_mg = rowMedians(as.matrix(sapply(1:nrow(coefs_mg_df), function(x){
+               prev_preg <- get_prev_from_log_odds(logodds_child+coefs_mg_df$gradient[x]*(logodds_child-coefs_mg_df$av_lo_child[x])+coefs_mg_df$intercept[x])
              }))))%>%
       group_by(time)%>%
-      summarise(median=median(prev_pg),
-                mean=mean(prev_pg),
-                upper=quantile(prev_pg,probs=0.975),
-                lower=quantile(prev_pg,probs=0.025))%>%
+      summarise(median_pg=median(prev_pg),
+                mean_pg=mean(prev_pg),
+                upper_pg=quantile(prev_pg,probs=0.975),
+                lower_pg=quantile(prev_pg,probs=0.025),
+                median_mg=median(prev_mg),
+                mean_mg=mean(prev_mg),
+                upper_mg=quantile(prev_mg,probs=0.975),
+                lower_mg=quantile(prev_mg,probs=0.025))%>%
       mutate(site = districts[[i]],
              month = as.yearmon(dates))
     df_prev <- rbind(df_prev,long_prev_sum)
@@ -134,10 +198,13 @@ create_dashboard_plots <- function(results,prev_pg=WA_pg_data_list,prev_mg=WA_sg
     prev_sample <- prev_history[, sample(ncol(prev_history), 100)] %>%
       mutate(t=c(1:nrow(prev_history)))%>%
       melt(id='t')%>%
-      rename(time=t)%>%
+      dplyr::rename(time=t)%>%
       mutate(logodds_child = log(get_odds_from_prev(value)),
              prev_pg = rowMedians(as.matrix(sapply(1:nrow(coefs_pg_df), function(x){
                prev_preg <- get_prev_from_log_odds(logodds_child+coefs_pg_df$gradient[x]*(logodds_child-coefs_pg_df$av_lo_child[x])+coefs_pg_df$intercept[x])
+             }))),
+             prev_mg = rowMedians(as.matrix(sapply(1:nrow(coefs_mg_df), function(x){
+               prev_preg <- get_prev_from_log_odds(logodds_child+coefs_mg_df$gradient[x]*(logodds_child-coefs_mg_df$av_lo_child[x])+coefs_mg_df$intercept[x])
              }))))%>%
       mutate(site = districts[[i]],
              month = as.yearmon(rep(dates,100)))
@@ -274,6 +341,48 @@ create_dashboard_plots <- function(results,prev_pg=WA_pg_data_list,prev_mg=WA_sg
                     rel_eir = value/max(long_eir_sum$median))
     df_eir_sample <- rbind(df_eir_sample,eir_sample)
   }
+  df_betaa <- data.frame(time = integer(),
+                       median = numeric(),
+                       mean = numeric(),
+                       upper = numeric(),
+                       lower = numeric(),
+                       site = character(),
+                       month = character(),
+                       rel_betaa = numeric())
+  df_betaa_sample <- data.frame(time = integer(),
+                              value = numeric(),
+                              variable = character(),
+                              site = character(),
+                              month = character(),
+                              rel_betaa = numeric())
+  for(i in 1:4){
+    betaa_history <- data.frame(t(results[[i]]$history['betaa', 51:1000, -1]))
+    dates <- WA_pg_data_list[[i]]$month
+    
+    long_betaa_sum <- betaa_history%>%
+      dplyr::mutate(t=c(1:nrow(betaa_history)))%>%
+      melt(id='t')%>%
+      dplyr::rename(time=t)%>%
+      group_by(time)%>%
+      dplyr::summarise(median=median(value),
+                       mean=mean(value),
+                       upper=quantile(value,probs=0.975),
+                       lower=quantile(value,probs=0.025))%>%
+      mutate(site = districts[[i]],
+             month = as.yearmon(dates),
+             rel_betaa = median/max(median))
+    df_betaa <- rbind(df_betaa,long_betaa_sum)
+    
+    betaa_sample <- betaa_history[, sample(ncol(betaa_history), 100)] %>%
+      mutate(t=c(1:nrow(betaa_history)))%>%
+      melt(id='t')%>%
+      dplyr::rename(time=t)%>%
+      dplyr::mutate(value = value,
+                    site = districts[[i]],
+                    month = as.yearmon(rep(dates,100)),
+                    rel_betaa = value/max(long_betaa_sum$median))
+    df_betaa_sample <- rbind(df_betaa_sample,betaa_sample)
+  }
   max_eir <- df_eir_sample %>%
     group_by(site) %>%
     summarise(max_eir = ifelse(max(value)==1000,800,max(value)*0.5))
@@ -283,7 +392,7 @@ create_dashboard_plots <- function(results,prev_pg=WA_pg_data_list,prev_mg=WA_sg
     filter(between(as.yearmon(Month), min(df_data_pg$month), max(df_data_pg$month)))%>%
     left_join(max_eir, by = join_by(Country == site))%>%
     mutate(rel_rainfall = Rainfall/max(Rainfall))%>%
-    rename(site = Country)
+    dplyr::rename(site = Country)
   
   # ratio <- 1.5 * max(df$upper)/max(df_eir$median)
   # est_inc_plot <- ggplot()+
@@ -405,10 +514,10 @@ create_dashboard_plots <- function(results,prev_pg=WA_pg_data_list,prev_mg=WA_sg
   # #         axis.ticks.length = unit(3, "pt"),
   # #         legend.position = 'none'
   # #   )
-  est_prev_plot <- ggplot()+
+  est_prev_pg_plot <- ggplot()+
     geom_line(data=df_prev_sample,aes(x=as.Date(month),y=prev_pg,color=site,group=variable),alpha=0.2)+
     # geom_ribbon(aes(x=month,ymin=lower,ymax=upper,fill=site,group=site),alpha=0.2)+
-    geom_line(data=df_prev,aes(x=as.Date(month),y=median,color=site,group=site),linewidth=1)+
+    geom_line(data=df_prev,aes(x=as.Date(month),y=median_pg,color=site,group=site),linewidth=1)+
     # geom_vline(xintercept = c(as.Date('2017-7-1'),as.Date('2021-5-1')),size=1,linetype='dashed') +
     geom_point(data=df_data_pg,aes(x=as.Date(month),y=mean,color=site,group=site),pch = 19,position=position_dodge(width=10))+
     geom_errorbar(data=df_data_pg,aes(x=as.Date(month),ymin=lower,ymax=upper,color=site,group=site),width = 0,position=position_dodge(width=10))+
@@ -419,6 +528,28 @@ create_dashboard_plots <- function(results,prev_pg=WA_pg_data_list,prev_mg=WA_sg
     coord_cartesian(xlim = range(as.Date(df_data_pg$month)))+
     facet_grid(factor(site,levels=c('Ghana', 'Burkina Faso', 'Mali', 'Gambia'))~.)+
     labs(title = 'ANC Prevalence\nPrimigrav')+
+    theme(legend.title = element_blank(),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          axis.text.x=element_text(angle=45, hjust=1, vjust=1),
+          axis.ticks.x = element_line(linewidth = 0.5),
+          axis.ticks.length = unit(3, "pt"),
+          legend.position = 'none'
+    )
+  est_prev_mg_plot <- ggplot()+
+    geom_line(data=df_prev_sample,aes(x=as.Date(month),y=prev_mg,color=site,group=variable),alpha=0.2)+
+    # geom_ribbon(aes(x=month,ymin=lower,ymax=upper,fill=site,group=site),alpha=0.2)+
+    geom_line(data=df_prev,aes(x=as.Date(month),y=median_mg,color=site,group=site),linewidth=1)+
+    # geom_vline(xintercept = c(as.Date('2017-7-1'),as.Date('2021-5-1')),size=1,linetype='dashed') +
+    geom_point(data=df_data_mg,aes(x=as.Date(month),y=mean,color=site,group=site),pch = 19,position=position_dodge(width=10))+
+    geom_errorbar(data=df_data_mg,aes(x=as.Date(month),ymin=lower,ymax=upper,color=site,group=site),width = 0,position=position_dodge(width=10))+
+    scale_color_manual(values=colors)+
+    scale_fill_manual(values=colors)+
+    scale_x_date(date_labels = "%b %Y")+
+    scale_y_continuous(limits=c(0,1))+
+    coord_cartesian(xlim = range(as.Date(df_data_pg$month)))+
+    facet_grid(factor(site,levels=c('Ghana', 'Burkina Faso', 'Mali', 'Gambia'))~.)+
+    labs(title = 'ANC Prevalence\nSecundigrav')+
     theme(legend.title = element_blank(),
           axis.title.x = element_blank(),
           axis.title.y = element_blank(),
@@ -448,7 +579,7 @@ create_dashboard_plots <- function(results,prev_pg=WA_pg_data_list,prev_mg=WA_sg
           legend.position = 'none'
     )
   # sample_size_plot+est_prev_plot+obs_prev_plot_mg+est_eir_plot+est_inc_plot+ plot_layout(guides = "collect",ncol=5)
-  sample_size_plot+est_prev_plot+obs_prev_plot_mg+est_eir_plot+rel_eir_plot+ plot_layout(guides = "collect",ncol=5)
+  sample_size_plot+est_prev_pg_plot+est_prev_mg_plot+est_eir_plot+rel_eir_plot+ plot_layout(guides = "collect",ncol=5)
 }
 
 create_dashboard_plots_all <- function(results,prev=WA_all_data_list){
@@ -488,7 +619,7 @@ create_dashboard_plots_all <- function(results,prev=WA_all_data_list){
     long_prev_sum <- prev_history%>%
       mutate(t=c(1:nrow(prev_history)))%>%
       melt(id='t')%>%
-      rename(time=t)%>%
+      dplyr::rename(time=t)%>%
       mutate(logodds_child = log(get_odds_from_prev(value)),
              prev_pg = rowMedians(as.matrix(sapply(1:nrow(coefs_pg_df), function(x){
                prev_preg <- get_prev_from_log_odds(logodds_child+coefs_pg_df$gradient[x]*(logodds_child-coefs_pg_df$av_lo_child[x])+coefs_pg_df$intercept[x])
@@ -505,7 +636,7 @@ create_dashboard_plots_all <- function(results,prev=WA_all_data_list){
     prev_sample <- prev_history[, sample(ncol(prev_history), 100)] %>%
       mutate(t=c(1:nrow(prev_history)))%>%
       melt(id='t')%>%
-      rename(time=t)%>%
+      dplyr::rename(time=t)%>%
       mutate(logodds_child = log(get_odds_from_prev(value)),
              prev_pg = rowMedians(as.matrix(sapply(1:nrow(coefs_pg_df), function(x){
                prev_preg <- get_prev_from_log_odds(logodds_child+coefs_pg_df$gradient[x]*(logodds_child-coefs_pg_df$av_lo_child[x])+coefs_pg_df$intercept[x])
@@ -636,7 +767,7 @@ create_dashboard_plots_all <- function(results,prev=WA_all_data_list){
     filter(between(as.yearmon(Month), min(df_data_pg$month), max(df_data_pg$month)))%>%
     left_join(max_eir, by = join_by(Country == site))%>%
     mutate(rel_rainfall = Rainfall/max(Rainfall))%>%
-    rename(site = Country)
+    dplyr::rename(site = Country)
   
   # ratio <- 1.5 * max(df$upper)/max(df_eir$median)
   # est_inc_plot <- ggplot()+
@@ -815,7 +946,7 @@ create_dashboard_plots_single <- function(results,prev_pg=WA_pg_data_list,prev_m
   df_prev <- prev_history%>%
     mutate(t=c(1:nrow(prev_history)))%>%
     melt(id='t')%>%
-    rename(time=t)%>%
+    dplyr::rename(time=t)%>%
     mutate(logodds_child = log(get_odds_from_prev(value)),
            prev_pg = rowMedians(as.matrix(sapply(1:nrow(coefs_pg_df), function(x){
              prev_preg <- get_prev_from_log_odds(logodds_child+coefs_pg_df$gradient[x]*(logodds_child-coefs_pg_df$av_lo_child[x])+coefs_pg_df$intercept[x])
@@ -843,7 +974,7 @@ create_dashboard_plots_single <- function(results,prev_pg=WA_pg_data_list,prev_m
     select(all_of(sample_index))%>%
     mutate(t=c(1:nrow(prev_history)))%>%
     melt(id='t')%>%
-    rename(time=t)%>%
+    dplyr::rename(time=t)%>%
     mutate(logodds_child = log(get_odds_from_prev(value)),
            prev_pg = rowMedians(as.matrix(sapply(1:nrow(coefs_pg_df), function(x){
              prev_preg <- get_prev_from_log_odds(logodds_child+coefs_pg_df$gradient[x]*(logodds_child-coefs_pg_df$av_lo_child[x])+coefs_pg_df$intercept[x])
@@ -1124,3 +1255,81 @@ wa_pg_bulk_seas_090623_dash
 wa_all_bulk_seas_090623_dash <- create_dashboard_plots_all(results=wa_all_bulk_seas_090623_result_list, prev=WA_all_data_list)
 windows(30,15)
 wa_all_bulk_seas_090623_dash
+
+wa_pgsg_bulk_sifter_betaa_dash <- create_dashboard_plots(results=wa_pgsg_bulk_sifter_betaa_results)
+
+##Sifter
+source('./trial/create_plots_trial.R')
+wa_pgsg_bulk_sifter_eir_results
+wa_pgsg_bulk_sifter_eir_dash <- create_dashboard_plots_trial(wa_pgsg_bulk_sifter_eir_results,
+                                                               prev_pg=WA_pg_data_list,
+                                                               prev_mg=WA_sg_data_list,
+                                                               coefs_pg_df = as.data.frame(readRDS('./nnp/Corr/pg_corr_sample.RDS')),
+                                                               coefs_mg_df = as.data.frame(readRDS('./nnp/Corr/sg_corr_sample.RDS')),
+                                                               start_pf_time = 30*4,
+                                                               param = 'EIR')
+wa_pgsg_bulk_sifter_eir_dash$rel_dash
+ggsave(paste0('Q:/anc_pmcmc/trial/figures/wa_pgsg_bulk_sifter_eir_dash_rel.pdf'), plot = wa_pgsg_bulk_sifter_eir_dash$rel_dash, width = 12, height = 6)
+
+wa_pgsg_bulk_sifter_betaa_dash <- create_dashboard_plots_trial(wa_pgsg_bulk_sifter_betaa_results,
+                                                               prev_pg=WA_pg_data_list,
+                                                               prev_mg=WA_sg_data_list,
+                                                               coefs_pg_df = as.data.frame(readRDS('./nnp/Corr/pg_corr_sample.RDS')),
+                                                               coefs_mg_df = as.data.frame(readRDS('./nnp/Corr/sg_corr_sample.RDS')),
+                                                               start_pf_time = 30*4,
+                                                               param = 'betaa')
+windows(30,15)
+wa_pgsg_bulk_sifter_betaa_dash$rel_dash
+ggsave(paste0('Q:/anc_pmcmc/trial/figures/wa_pgsg_bulk_sifter_betaa_dash_rel_max62.pdf'), plot = wa_pgsg_bulk_sifter_betaa_dash$rel_dash, width = 12, height = 6)
+
+wa_pgsg_bulk_sifter_betaa_max125_dash <- create_dashboard_plots_trial(wa_pgsg_bulk_sifter_betaa_max125_results,
+                                                               prev_pg=WA_pg_data_list,
+                                                               prev_mg=WA_sg_data_list,
+                                                               coefs_pg_df = as.data.frame(readRDS('./nnp/Corr/pg_corr_sample.RDS')),
+                                                               coefs_mg_df = as.data.frame(readRDS('./nnp/Corr/sg_corr_sample.RDS')),
+                                                               start_pf_time = 30*4,
+                                                               param = 'betaa')
+windows(30,15)
+wa_pgsg_bulk_sifter_betaa_max125_dash$rel_dash
+ggsave(paste0('Q:/anc_pmcmc/trial/figures/wa_pgsg_bulk_sifter_betaa_max125_rel.pdf'), plot = wa_pgsg_bulk_sifter_betaa_max125_dash$rel_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/trial/figures/wa_pgsg_bulk_sifter_betaa_max125_full.pdf'), plot = wa_pgsg_bulk_sifter_betaa_max125_dash$full_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/trial/figures/wa_pgsg_bulk_sifter_betaa_max125_mcmc.pdf'), plot = wa_pgsg_bulk_sifter_betaa_max125_dash$mcmc_dash, width = 6, height = 6)
+
+wa_pgsg_bulk_sifter_betaa_2407_dash <- create_dashboard_plots_trial(wa_pgsg_bulk_sifter_betaa_2407_results,
+                                                                      prev_pg=WA_pg_data_list,
+                                                                      prev_mg=WA_sg_data_list,
+                                                                      coefs_pg_df = as.data.frame(readRDS('./nnp/Corr/pg_corr_sample.RDS')),
+                                                                      coefs_mg_df = as.data.frame(readRDS('./nnp/Corr/sg_corr_sample.RDS')),
+                                                                      start_pf_time = 30*4,
+                                                                      param = 'betaa')
+windows(30,15)
+wa_pgsg_bulk_sifter_betaa_2407_dash$rel_dash
+wa_pgsg_bulk_sifter_betaa_2407_dash$overlay_plot
+
+ggsave(paste0('Q:/anc_pmcmc/trial/figures/wa_pgsg_bulk_sifter_betaa_2407_rel.pdf'), plot = wa_pgsg_bulk_sifter_betaa_2407_dash$rel_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/trial/figures/wa_pgsg_bulk_sifter_betaa_2407_full.pdf'), plot = wa_pgsg_bulk_sifter_betaa_2407_dash$full_dash, width = 12, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/trial/figures/wa_pgsg_bulk_sifter_betaa_2407_mcmc.pdf'), plot = wa_pgsg_bulk_sifter_betaa_2407_dash$mcmc_dash, width = 6, height = 6)
+ggsave(paste0('Q:/anc_pmcmc/trial/figures/wa_pgsg_bulk_sifter_betaa_2407_overlay.pdf'), plot = wa_pgsg_bulk_sifter_betaa_2407_dash$overlay_plot, width = 6, height = 12)
+
+source('./trial/create_plots_trial_ea.R')
+ea_pgmg_bulk_sifter_eir_max2000_dash <- create_dashboard_plots_trial_ea(ea_pgmg_bulk_sifter_eir_max2000_results,
+                                                                      prev_pg=EA_pg_data_list,
+                                                                      prev_mg=EA_mg_data_list,
+                                                                      coefs_pg_df = as.data.frame(readRDS('./nnp/Corr/pg_corr_sample.RDS')),
+                                                                      coefs_mg_df = as.data.frame(readRDS('./nnp/Corr/mg_corr_sample.RDS')),
+                                                                      start_pf_time = 30*4,
+                                                                      param = 'EIR')
+windows(30,15)
+ea_pgmg_bulk_sifter_eir_max2000_dash$rel_dash
+ggsave(paste0('Q:/anc_pmcmc/trial/figures/ea_pgmg_bulk_sifter_eir_max2000.pdf'), plot = ea_pgmg_bulk_sifter_eir_max2000_dash$rel_dash, width = 12, height = 6)
+
+ea_pgmg_bulk_sifter_betaa_max125_dash <- create_dashboard_plots_trial_ea(ea_pgmg_bulk_sifter_betaa_max125_results,
+                                                                        prev_pg=EA_pg_data_list,
+                                                                        prev_mg=EA_mg_data_list,
+                                                                        coefs_pg_df = as.data.frame(readRDS('./nnp/Corr/pg_corr_sample.RDS')),
+                                                                        coefs_mg_df = as.data.frame(readRDS('./nnp/Corr/mg_corr_sample.RDS')),
+                                                                        start_pf_time = 30*4,
+                                                                        param = 'betaa')
+windows(30,15)
+ea_pgmg_bulk_sifter_betaa_max125_dash$rel_dash
+ggsave(paste0('Q:/anc_pmcmc/trial/figures/ea_pgmg_bulk_sifter_betaa_max125.pdf'), plot = ea_pgmg_bulk_sifter_betaa_max125_dash$rel_dash, width = 12, height = 6)
