@@ -313,6 +313,7 @@ incv <- delay(lag_incv, delayMos)
 
 # Number of mosquitoes born (depends on PL, number of larvae), or is constant outside of seasonality
 betaa <- 0.5*PL/dPL
+output(betaa_out) <- betaa
 #betaa <- mv0 * mu0 * theta2
 
 deriv(Sv) <- -ince - mu*Sv + betaa
@@ -433,6 +434,8 @@ output(inc) <- sum(clin_inc[,])
 
 EIR_agg[,] <- EIR[i,j]* DY /(rel_foi[j] * foi_age[i]) 
 dim(EIR_agg) <- c(na,nh)
+output(EIR_out) <- (av * Iv/omega)*DY
+
 # Param checking outputs
 #output(mu) <- mu
 #output(beta_larval) <- beta_larval
@@ -524,12 +527,12 @@ output(ID0_init) <- ID0
 output(kD_init) <- kD
 output(dE_init) <- dE
 output(DY_init) <- DY
-EIR_SD <- user()
-output(EIR_SD_init) <- EIR_SD
+volatility <- user()
+output(volatility_init) <- volatility
 lag_rates <- user()
 output(lag_rates_init) <- lag_rates
-max_EIR <- user()
-output(max_EIR_init) <- max_EIR
+max_param <- user()
+output(max_param_init) <- max_param
 output(Q0_init) <- Q0
 output(state_check_init) <- state_check
 output(tau1_init) <- tau1
